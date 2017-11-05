@@ -8,8 +8,7 @@ module LexerTests =
 
     [<Test>]
     let testNextTokenAndReadChar() =
-        let input = @"
-            let five = 5;
+        let input = @"let five = 5;
             let ten = 10;
 
             let add = fn(x, y) {

@@ -23,7 +23,7 @@ module Lexer =
         readChar l 
 
     let isLetter ch =
-            'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch = '_'
+        'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch = '_'
 
     let readIdentifier l =
         let position = l.Position
@@ -33,28 +33,43 @@ module Lexer =
             | true -> 
                 let newLexer = readChar lex
                 readIdentiferUntilNotChar newLexer
-            | false -> (lex, input.[position..lex.Position])
+            | false -> (lex, input.[position..lex.Position-1])
         readIdentiferUntilNotChar l
+
+    let skipWhitespace l =
+        let isWhitespace ch =
+            ch = ' ' || ch = '\t' || ch = '\n' || ch = '\r'
+        let rec skipWhitespaceRec lex =
+            match isWhitespace lex.CurrentChar with
+            | true -> 
+                let newLexer = readChar lex
+                skipWhitespaceRec newLexer
+            | false -> lex
+        skipWhitespaceRec l
 
     let nextToken l =
         let newToken literal tokenType =
             {Type = tokenType; Literal = literal}
 
-        let partialToken = newToken (l.CurrentChar.ToString())
-        match l.CurrentChar with
-            | '=' -> (readChar l, partialToken ASSIGN)
-            | ';' -> (readChar l, partialToken SEMICOLON)
-            | '(' -> (readChar l, partialToken LPAREN)
-            | ')' -> (readChar l, partialToken RPAREN)
-            | ',' -> (readChar l, partialToken COMMA)
-            | '+' -> (readChar l, partialToken PLUS)
-            | '{' -> (readChar l, partialToken LBRACE)
-            | '}' -> (readChar l, partialToken RBRACE)
-            | emptyChar -> (readChar l, partialToken EOF)
+        let wsLexer = skipWhitespace l
+
+        let partialToken = newToken (wsLexer.CurrentChar.ToString())
+        match wsLexer.CurrentChar with
+            | '=' -> (readChar wsLexer, partialToken ASSIGN)
+            | ';' -> (readChar wsLexer, partialToken SEMICOLON)
+            | '(' -> (readChar wsLexer, partialToken LPAREN)
+            | ')' -> (readChar wsLexer, partialToken RPAREN)
+            | ',' -> (readChar wsLexer, partialToken COMMA)
+            | '+' -> (readChar wsLexer, partialToken PLUS)
+            | '{' -> (readChar wsLexer, partialToken LBRACE)
+            | '}' -> (readChar wsLexer, partialToken RBRACE)
             | _ -> 
-                if isLetter l.CurrentChar then
-                    let newLexer, identifier = readIdentifier l
-                    let token = newToken identifier ASSIGN
+                if isLetter wsLexer.CurrentChar then
+                    let newLexer, identifier = readIdentifier wsLexer
+                    let tokenType = lookupIdent identifier
+                    let token = newToken identifier tokenType
                     (newLexer, token)
+                else if wsLexer.CurrentChar = emptyChar then
+                    (readChar wsLexer, partialToken EOF)
                 else
-                    (readChar l, partialToken ILLEGAL)
+                    (readChar wsLexer, partialToken ILLEGAL)

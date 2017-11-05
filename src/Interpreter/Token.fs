@@ -44,10 +44,7 @@ module Token =
     [<Literal>]
     let LET = "LET"
 
-    let private keywords = dict [ 
-        ("fn", FUNCTION)
-        ("let", LET)
-    ]
+    let private keywords = dict [ ("fn", FUNCTION); ("let", LET) ]
 
     let lookupIdent ident =
         let found, value = keywords.TryGetValue ident

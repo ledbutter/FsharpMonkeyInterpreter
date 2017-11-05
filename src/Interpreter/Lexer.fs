@@ -1,5 +1,4 @@
 ﻿namespace Monkey
-open TokenConsts
 open Token
 
 module Lexer =
@@ -10,10 +9,10 @@ module Lexer =
 
     type Lexer = { Input : string; Position: int; ReadPosition : int; CurrentChar : char }
 
-    let incrementLexer l newCurrentChar =
-        {l with CurrentChar = newCurrentChar; Position = l.ReadPosition; ReadPosition = l.ReadPosition + 1 }
-
     let readChar l =
+        let incrementLexer l newCurrentChar =
+            {l with CurrentChar = newCurrentChar; Position = l.ReadPosition; ReadPosition = l.ReadPosition + 1 }
+
         if l.ReadPosition >= l.Input.Length then
             incrementLexer l emptyChar
         else
@@ -22,20 +21,40 @@ module Lexer =
     let createLexer s =
         let l = {Input = s; Position = 0; ReadPosition = 0; CurrentChar = emptyChar}
         readChar l 
-    
-    let newToken (tokenChar:char) tokenType =
-        {Type = tokenType; Literal = (tokenChar.ToString())}
+
+    let isLetter ch =
+            'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch = '_'
+
+    let readIdentifier l =
+        let position = l.Position
+        let input = l.Input
+        let rec readIdentiferUntilNotChar lex =
+            match isLetter lex.CurrentChar with
+            | true -> 
+                let newLexer = readChar lex
+                readIdentiferUntilNotChar newLexer
+            | false -> (lex, input.[position..lex.Position])
+        readIdentiferUntilNotChar l
 
     let nextToken l =
-        let partialToken = newToken l.CurrentChar
+        let newToken literal tokenType =
+            {Type = tokenType; Literal = literal}
+
+        let partialToken = newToken (l.CurrentChar.ToString())
         match l.CurrentChar with
-            | '=' -> partialToken ASSIGN
-            | ';' -> partialToken SEMICOLON
-            | '(' -> partialToken LPAREN
-            | ')' -> partialToken RPAREN
-            | ',' -> partialToken COMMA
-            | '+' -> partialToken PLUS
-            | '{' -> partialToken LBRACE
-            | '}' -> partialToken RBRACE
-            | emptyChar -> partialToken EOF
-            | _ -> raise (UnknownCharacter l.CurrentChar)
+            | '=' -> (readChar l, partialToken ASSIGN)
+            | ';' -> (readChar l, partialToken SEMICOLON)
+            | '(' -> (readChar l, partialToken LPAREN)
+            | ')' -> (readChar l, partialToken RPAREN)
+            | ',' -> (readChar l, partialToken COMMA)
+            | '+' -> (readChar l, partialToken PLUS)
+            | '{' -> (readChar l, partialToken LBRACE)
+            | '}' -> (readChar l, partialToken RBRACE)
+            | emptyChar -> (readChar l, partialToken EOF)
+            | _ -> 
+                if isLetter l.CurrentChar then
+                    let newLexer, identifier = readIdentifier l
+                    let token = newToken identifier ASSIGN
+                    (newLexer, token)
+                else
+                    (readChar l, partialToken ILLEGAL)

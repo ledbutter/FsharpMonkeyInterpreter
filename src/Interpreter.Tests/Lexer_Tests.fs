@@ -2,29 +2,67 @@
 
 open NUnit.Framework
 open Monkey.Token
-open Monkey.TokenConsts
 open Monkey.Lexer
 
 module LexerTests =
 
-    let nextTokenTestCases =
-        [
-            "=", ASSIGN, "="
-            "+", PLUS, "+"
-            "(", LPAREN, "("
-            ")", RPAREN, ")"
-            "{", LBRACE, "{"
-            "}", RBRACE, "}"
-            ",", COMMA, ","
-            ";", SEMICOLON, ";"
-            (emptyChar.ToString()), EOF, (emptyChar.ToString())
-        ] |> List.map(fun (i, t, l) -> TestCaseData(i, t, l))
-    
-    [<TestCaseSource("nextTokenTestCases")>]
-    let testNextToken(input:string, expectedTokenType:TokenType, expectedLiteral:string) =
-        //let input = "=+(){},;"
+    [<Test>]
+    let testNextTokenAndReadChar() =
+        let input = @"
+            let five = 5;
+            let ten = 10;
+
+            let add = fn(x, y) {
+                x + y;
+            }
+
+            let result = add(five, ten);
+            "
+
+        let expectedResults = [
+            LET, "let"
+            IDENT, "five"
+            ASSIGN, "="
+            INT, "5"
+            SEMICOLON, ";"
+            LET, "let"
+            IDENT, "ten"
+            ASSIGN, "="
+            INT, "10"
+            SEMICOLON, ";"
+            LET, "let"
+            IDENT, "add"
+            ASSIGN, "="
+            FUNCTION, "fn"
+            LPAREN, "("
+            IDENT, "x"
+            COMMA, ","
+            IDENT, "y"
+            RPAREN, ")"
+            LBRACE, "{"
+            IDENT, "x"
+            PLUS, "+"
+            IDENT, "y"
+            SEMICOLON, ";"
+            RBRACE, "}"
+            SEMICOLON, ";"
+            LET, "let"
+            IDENT, "result"
+            ASSIGN, "="
+            IDENT, "add"
+            LPAREN, "("
+            IDENT, "five"
+            COMMA, ","
+            IDENT, "ten"
+            RPAREN, ")"
+            SEMICOLON, ";"
+            EOF, ""
+        ]
 
         let lexer = createLexer input
-        let token = nextToken lexer
-        Assert.AreEqual(expectedTokenType, token.Type, "type")
-        Assert.AreEqual(expectedLiteral, token.Literal, "literal")
+
+        for expected in expectedResults do
+            let nextLexer, token = nextToken lexer
+            let expectedType, expectedLiteral = expected
+            Assert.AreEqual(expectedType, token.Type, "type")
+            Assert.AreEqual(expectedLiteral, token.Literal, "literal")

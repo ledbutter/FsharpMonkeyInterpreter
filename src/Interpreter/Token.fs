@@ -6,8 +6,6 @@ module Token =
 
     type Token = { Type : TokenType; Literal : string }
 
-module TokenConsts =
-
     [<Literal>]
     let ILLEGAL = "ILLEGAL"
     [<Literal>]
@@ -45,3 +43,15 @@ module TokenConsts =
     let FUNCTION = "FUNCTION"
     [<Literal>]
     let LET = "LET"
+
+    let private keywords = dict [ 
+        ("fn", FUNCTION)
+        ("let", LET)
+    ]
+
+    let lookupIdent ident =
+        let found, value = keywords.TryGetValue ident
+        if found then
+            value
+        else
+            IDENT

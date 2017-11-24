@@ -1,5 +1,6 @@
 ﻿namespace Monkey
 open Token
+open System
 
 module Lexer =
 
@@ -10,13 +11,13 @@ module Lexer =
     type Lexer = { Input : string; Position: int; ReadPosition : int; CurrentChar : char }
 
     let readChar l =
-        let incrementLexer l newCurrentChar =
-            {l with CurrentChar = newCurrentChar; Position = l.ReadPosition; ReadPosition = l.ReadPosition + 1 }
+        let incrementLexer newCurrentChar =
+            {l with CurrentChar = newCurrentChar; Position = l.ReadPosition; ReadPosition = l.ReadPosition + 1; Input = l.Input }
 
         if l.ReadPosition >= l.Input.Length then
-            incrementLexer l emptyChar
+            incrementLexer emptyChar
         else
-            incrementLexer l l.Input.[l.ReadPosition]
+            incrementLexer l.Input.[l.ReadPosition]
 
     let createLexer s =
         let l = {Input = s; Position = 0; ReadPosition = 0; CurrentChar = emptyChar}
@@ -50,10 +51,20 @@ module Lexer =
     let nextToken l =
         let newToken literal tokenType =
             {Type = tokenType; Literal = literal}
+            
+        let readNumber l =
+            let rec readNumberRec lex pos =
+                match Char.IsNumber(lex.CurrentChar) with
+                | true ->
+                    let newLexer = readChar lex
+                    readNumberRec newLexer (pos + 1)
+                | false -> lex
+            readNumberRec l l.Position
 
         let wsLexer = skipWhitespace l
 
         let partialToken = newToken (wsLexer.CurrentChar.ToString())
+
         match wsLexer.CurrentChar with
             | '=' -> (readChar wsLexer, partialToken ASSIGN)
             | ';' -> (readChar wsLexer, partialToken SEMICOLON)
@@ -68,6 +79,11 @@ module Lexer =
                     let newLexer, identifier = readIdentifier wsLexer
                     let tokenType = lookupIdent identifier
                     let token = newToken identifier tokenType
+                    (newLexer, token)
+                else if Char.IsNumber(wsLexer.CurrentChar) then
+                    let newLexer = readNumber wsLexer
+                    let numberValue = newLexer.Input.Substring(wsLexer.Position, newLexer.Position - wsLexer.Position)
+                    let token = newToken numberValue INT
                     (newLexer, token)
                 else if wsLexer.CurrentChar = emptyChar then
                     (readChar wsLexer, partialToken EOF)

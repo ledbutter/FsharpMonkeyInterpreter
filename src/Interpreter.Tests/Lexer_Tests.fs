@@ -13,7 +13,7 @@ module LexerTests =
 
             let add = fn(x, y) {
                 x + y;
-            }
+            };
 
             let result = add(five, ten);
             "
@@ -55,13 +55,18 @@ module LexerTests =
             IDENT, "ten"
             RPAREN, ")"
             SEMICOLON, ";"
-            EOF, ""
+            EOF, (char 0).ToString()
         ]
 
         let lexer = createLexer input
 
-        for expected in expectedResults do
-            let nextLexer, token = nextToken lexer
-            let expectedType, expectedLiteral = expected
-            Assert.AreEqual(expectedType, token.Type, "type")
-            Assert.AreEqual(expectedLiteral, token.Literal, "literal")
+        let rec runTestCaseRec lex expected =
+            match expected with
+            | [] -> ignore
+            | x::xs -> 
+                let nextLexer, token = nextToken lex
+                let expectedType, expectedLiteral = x
+                Assert.AreEqual(expectedType, token.Type, "type")
+                Assert.AreEqual(expectedLiteral, token.Literal, "literal")
+                runTestCaseRec nextLexer xs
+        runTestCaseRec lexer expectedResults |> ignore

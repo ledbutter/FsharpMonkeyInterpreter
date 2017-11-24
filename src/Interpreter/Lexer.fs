@@ -8,6 +8,7 @@ module Lexer =
 
     let emptyChar = (char 0)
 
+    // todo: there has to be a better way than copying the Input around for each lexer!
     type Lexer = { Input : string; Position: int; ReadPosition : int; CurrentChar : char }
 
     let readChar l =

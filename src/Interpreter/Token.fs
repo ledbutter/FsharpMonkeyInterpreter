@@ -56,8 +56,18 @@ module Token =
     let FUNCTION = "FUNCTION"
     [<Literal>]
     let LET = "LET"
+    [<Literal>]
+    let TRUE = "TRUE"
+    [<Literal>]
+    let FALSE = "FALSE"
+    [<Literal>]
+    let IF = "IF"
+    [<Literal>]
+    let ELSE = "ELSE"
+    [<Literal>]
+    let RETURN = "RETURN"
 
-    let private keywords = dict [ ("fn", FUNCTION); ("let", LET) ]
+    let private keywords = dict [ ("fn", FUNCTION); ("let", LET); ("true", TRUE); ("false", FALSE); ("if", IF); ("else", ELSE); ("return", RETURN) ]
 
     let lookupIdent ident =
         let found, value = keywords.TryGetValue ident

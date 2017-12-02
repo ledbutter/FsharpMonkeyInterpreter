@@ -83,6 +83,8 @@ module LexerTests =
             };
 
             let result = add(five, ten);
+            !-/*5;
+            5 < 10 > 5;
             "
 
         let expectedResults = [
@@ -121,6 +123,18 @@ module LexerTests =
             COMMA, ","
             IDENT, "ten"
             RPAREN, ")"
+            SEMICOLON, ";"
+            BANG, "!"
+            MINUS, "-"
+            SLASH, "/"
+            ASTERISK, "*"
+            INT, "5"
+            SEMICOLON, ";"
+            INT, "5"
+            LT, "<"
+            INT, "10"
+            GT, ">"
+            INT, "5"
             SEMICOLON, ";"
             EOF, (char 0).ToString()
         ]

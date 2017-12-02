@@ -22,6 +22,19 @@ module Token =
     let ASSIGN = "="
     [<Literal>]
     let PLUS = "+"
+    [<Literal>]
+    let MINUS = "-"
+    [<Literal>]
+    let BANG = "!"
+    [<Literal>]
+    let ASTERISK = "*"
+    [<Literal>]
+    let SLASH = "/"
+
+    [<Literal>]
+    let LT = "<"
+    [<Literal>]
+    let GT = ">"
 
     // Delimiters
     [<Literal>]

@@ -65,17 +65,24 @@ module Lexer2 =
             else 
                 let wsPos = skipWhitespace lexerPos
                 let partialToken = newToken (wsPos.CurrentChar.ToString())
+                let oneCharacterPositionIncrement = incrementPosition wsPos
 
                 let newLexerPos, token =
                     match wsPos.CurrentChar with
-                    | '=' -> (incrementPosition wsPos, partialToken ASSIGN) 
-                    | ';' -> (incrementPosition wsPos, partialToken SEMICOLON)
-                    | '(' -> (incrementPosition wsPos, partialToken LPAREN)
-                    | ')' -> (incrementPosition wsPos, partialToken RPAREN)
-                    | ',' -> (incrementPosition wsPos, partialToken COMMA)
-                    | '+' -> (incrementPosition wsPos, partialToken PLUS)
-                    | '{' -> (incrementPosition wsPos, partialToken LBRACE)
-                    | '}' -> (incrementPosition wsPos, partialToken RBRACE)
+                    | '=' -> (oneCharacterPositionIncrement, partialToken ASSIGN) 
+                    | ';' -> (oneCharacterPositionIncrement, partialToken SEMICOLON)
+                    | '(' -> (oneCharacterPositionIncrement, partialToken LPAREN)
+                    | ')' -> (oneCharacterPositionIncrement, partialToken RPAREN)
+                    | ',' -> (oneCharacterPositionIncrement, partialToken COMMA)
+                    | '+' -> (oneCharacterPositionIncrement, partialToken PLUS)
+                    | '{' -> (oneCharacterPositionIncrement, partialToken LBRACE)
+                    | '}' -> (oneCharacterPositionIncrement, partialToken RBRACE)
+                    | '-' -> (oneCharacterPositionIncrement, partialToken MINUS)
+                    | '!' -> (oneCharacterPositionIncrement, partialToken BANG)
+                    | '/' -> (oneCharacterPositionIncrement, partialToken SLASH)
+                    | '*' -> (oneCharacterPositionIncrement, partialToken ASTERISK)
+                    | '>' -> (oneCharacterPositionIncrement, partialToken GT)
+                    | '<' -> (oneCharacterPositionIncrement, partialToken LT)
                     | _ -> 
                         if isLetter wsPos.CurrentChar then
                             let newPos, identifier = readIdentifier wsPos
@@ -87,9 +94,9 @@ module Lexer2 =
                             let numberToken = newToken numberValue INT
                             (newPos, numberToken)
                         else if wsPos.CurrentChar = emptyChar then
-                            (incrementPosition wsPos, partialToken EOF)
+                            (oneCharacterPositionIncrement, partialToken EOF)
                         else
-                            (incrementPosition wsPos, partialToken ILLEGAL)
+                            (oneCharacterPositionIncrement, partialToken ILLEGAL)
                 nextTokenRec newLexerPos (token::tokens)
                 
         let initialLexerPosition = { Pos = 0; ReadPos = 1; CurrentChar = input.[0] }

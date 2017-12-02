@@ -91,6 +91,9 @@ module LexerTests =
             } else {
                 return false;
             }
+
+            10 == 10;
+            10 != 9;
             "
 
         let expectedResults = [
@@ -159,6 +162,14 @@ module LexerTests =
             FALSE, "false"
             SEMICOLON, ";"
             RBRACE, "}"
+            INT, "10"
+            EQ, "=="
+            INT, "10"
+            SEMICOLON, ";"
+            INT, "10"
+            NOT_EQ, "!="
+            INT, "9"
+            SEMICOLON, ";"
             EOF, (char 0).ToString()
         ]
 

@@ -36,6 +36,11 @@ module Token =
     [<Literal>]
     let GT = ">"
 
+    [<Literal>]
+    let EQ = "=="
+    [<Literal>]
+    let NOT_EQ = "!="
+
     // Delimiters
     [<Literal>]
     let COMMA = ","

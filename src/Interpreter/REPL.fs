@@ -9,12 +9,14 @@ module Repl =
     [<Literal>]
     let PROMPT = ">> "
 
-    let start (reader:TextReader) (writer:TextWriter) =
-        let rec startRec =
-            // todo: async!
-            writer.Write(PROMPT) |> ignore
-            let scanned = reader.ReadLine()
-            let tokens = tokenizeInput scanned
-            for i in 0..tokens.Length-1 do
-                writer.WriteLine(tokens.[i])
-        startRec
+    type IPrinter =
+        abstract Print : Printf.TextWriterFormat<'a> -> 'a
+
+    let rec start (reader:TextReader) (output:IPrinter) =
+        // todo: async!
+        output.Print ">> "
+        let scanned = reader.ReadLine()
+        let tokens = tokenizeInput scanned
+        for i in 0..tokens.Length-1 do
+            output.Print "%A" tokens.[i]
+        start reader output

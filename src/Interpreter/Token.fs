@@ -4,7 +4,9 @@ module Token =
 
     type TokenType = string
 
-    type Token = { Type : TokenType; Literal : string }
+    [<StructuredFormatDisplay("Token: {Type} {Literal}")>]
+    type Token = 
+        { Type : TokenType; Literal : string }
 
     [<Literal>]
     let ILLEGAL = "ILLEGAL"

@@ -8,7 +8,9 @@ let main argv =
     
     printfn "Hello! Welcome to the Monkey Programming Language!"
     printfn "Feel free to type in commands\n"
+
+    let output = {new IPrinter with member this.Print(s) = printfn s}
     
-    start stdin stdout
+    start stdin (output)
 
     0 // return an integer exit code

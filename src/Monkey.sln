@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Monkey", "Interpreter\Monkey.fsproj", "{DE4E1051-DE63-45D9-ADC0-7759376A7CDE}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Monkey", "Monkey\Monkey.fsproj", "{DE4E1051-DE63-45D9-ADC0-7759376A7CDE}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Monkey.Tests", "Interpreter.Tests\Monkey.Tests.fsproj", "{657CC1CD-1001-4DA7-9131-09B91216CE52}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Monkey.Tests", "Monkey.Tests\Monkey.Tests.fsproj", "{657CC1CD-1001-4DA7-9131-09B91216CE52}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MonkeyRepl", "MonkeyRepl\MonkeyRepl.fsproj", "{AECDE071-C846-41C1-8517-30E776F14906}"
 EndProject

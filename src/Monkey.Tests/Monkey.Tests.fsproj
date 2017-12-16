@@ -8,7 +8,7 @@
     <ProjectGuid>657cc1cd-1001-4da7-9131-09b91216ce52</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>Interpreter.Tests</RootNamespace>
-    <AssemblyName>Interpreter.Tests</AssemblyName>
+    <AssemblyName>Monkey.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -54,6 +54,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Lexer_Tests.fs" />
     <Content Include="packages.config" />
+    <Compile Include="Parser_Tests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
@@ -69,7 +70,7 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Interpreter\Monkey.fsproj">
+    <ProjectReference Include="..\Monkey\Monkey.fsproj">
       <Name>Monkey</Name>
       <Project>{de4e1051-de63-45d9-adc0-7759376a7cde}</Project>
       <Private>True</Private>

@@ -53,7 +53,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Interpreter\Monkey.fsproj">
+    <ProjectReference Include="..\Monkey\Monkey.fsproj">
       <Name>Monkey</Name>
       <Project>{de4e1051-de63-45d9-adc0-7759376a7cde}</Project>
       <Private>True</Private>

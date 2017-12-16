@@ -2,6 +2,8 @@
 open Token
 open System
 
+// this is the old, more Go-ish start at doing this, I abandoned it for Lexer2 where we just parse everything at once
+// and avoid a lot of state tracking
 module Lexer =
 
     exception UnknownCharacter of char

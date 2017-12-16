@@ -10,6 +10,7 @@ module Parser =
     //type Parser = {Tokens: Token[]; CurrentPosition: int}
 
     let parseProgram tokens =
+        //todo: pick up at page 41
         let statements : Statement list = []
         let p = { Statements = statements }
         p

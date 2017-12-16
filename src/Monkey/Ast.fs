@@ -20,13 +20,6 @@ module Ast =
         //abstract member Node: Node
         //abstract member ExpressionNode: unit -> unit
 
-//    type Program(Statements: Statement list) =
-//        interface Statement with
-//            member this.TokenLiteral() = 
-//                if Statements.Length > 0 then
-//                    Statements.[0].TokenLiteral()
-//                else
-//                    ""
     type Program =
         {
             Statements: Statement list

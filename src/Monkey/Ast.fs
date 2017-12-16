@@ -37,6 +37,7 @@ module Ast =
                     this.Statements.[0].TokenLiteral()
                 else
                     ""
+        member this.TokenLiteral() = (this :> Statement).TokenLiteral()
 
     type Identifier = 
         {
@@ -46,6 +47,7 @@ module Ast =
         interface Expression with
             member this.TokenLiteral() =
                 this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
 
     type LetStatement = 
         {   
@@ -56,3 +58,4 @@ module Ast =
         interface Statement with
             member this.TokenLiteral() =
                 this.Token.Literal
+        member this.TokenLiteral() = (this :> Statement).TokenLiteral()

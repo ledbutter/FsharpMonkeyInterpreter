@@ -10,8 +10,8 @@ module Parser_Tests =
     let testLetStatement (statement:Statement) (expectedName:string) =
         Assert.AreEqual("let", statement.TokenLiteral())
         let letStatement = statement :?> LetStatement
-        Assert.AreEqual(expectedName, letStatement.Name.Value)
-        Assert.AreEqual(expectedName, letStatement.Name.TokenLiteral())
+        Assert.AreEqual(expectedName, letStatement.Name.Value, "name value")
+        Assert.AreEqual(expectedName, letStatement.Name.TokenLiteral(), "name token literal")
 
     [<Test>]
     let testLetStatements() =
@@ -21,8 +21,8 @@ module Parser_Tests =
             let foobar = 838383;
             "
         let tokens = input |> tokenizeInput
-        let program = tokens |> parseProgram
-        Assert.AreEqual(3, program.Statements.Length, "Statement Length")
+        let statements = tokens |> parseProgram
+        Assert.AreEqual(3, statements.Length, "Statement Length")
 
         let expectedResults = [
             "x"
@@ -31,7 +31,7 @@ module Parser_Tests =
         ]
 
         for i in 0..expectedResults.Length-1 do
-            let statement = program.Statements.Item(i)
+            let statement = statements.Item(i)
             testLetStatement statement (expectedResults.Item(i)) |> ignore
 
     

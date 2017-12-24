@@ -52,3 +52,12 @@ module Ast =
             member this.TokenLiteral() =
                 this.Token.Literal
         member this.TokenLiteral() = (this :> Statement).TokenLiteral()
+
+    type EmptyExpression =
+        {
+            Value: string
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Value
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()

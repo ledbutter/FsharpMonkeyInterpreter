@@ -31,17 +31,22 @@ module Parser =
                     let name = {Identifier.Token = identifierToken; Value = identifierToken.Literal}
                     // todo: create an actual expression
                     let value = {EmptyExpression.Value = ""}
+                    // notice we are downcasting to statement here!!!
                     let letStatement = {Token = currentToken; Name = name; Value = value} :> Statement
                     // skip over the semicolon by just taking the tail
                     (letStatement, nextRemainingTokens.Tail)
             | _ -> raise (ParseError("Unexpected token type"))
 
         let rec parseTokens remainingTokens statements =
+            let (|EndOfTokens|_|) (t: Token list) = 
+                if List.isEmpty t || t.Head.Type = EOF then 
+                    Some () 
+                else None
+
             match remainingTokens with
-            | [] -> List.rev statements
-            | x::xs when x.Type = EOF -> List.rev statements
-            | x::xs ->
-                let newStatement, nextRemainingTokens = parseToken x xs
+            | EndOfTokens -> List.rev statements
+            | _ ->
+                let newStatement, nextRemainingTokens = parseToken remainingTokens.Head remainingTokens.Tail
                 parseTokens nextRemainingTokens (newStatement::statements)
 
         parseTokens tokens []

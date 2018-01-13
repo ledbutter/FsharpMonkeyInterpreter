@@ -9,7 +9,9 @@ module Parser =
 
     exception ParseError of string
 
-    type ParserOutput = {Statements: Statement List; Errors: string List}
+    type ParserOutput =
+        | Statements of Statement List
+        | Errors of string List
 
     let parseProgram tokens =
 
@@ -46,16 +48,20 @@ module Parser =
                     (EmptyStatement() :> Statement, remainingTokens, parserErrors)
             | _ -> raise (ParseError("Unexpected token type"))
 
-        let rec parseTokens remainingTokens statements errors =
+        let rec parseTokens remainingTokens statements =
             let (|EndOfTokens|_|) (t: Token list) = 
                 if List.isEmpty t || t.Head.Type = EOF then 
                     Some () 
-                else None
+                else 
+                    None
 
             match remainingTokens with
-            | EndOfTokens -> List.rev statements
+            | EndOfTokens -> Statements(List.rev statements)
             | _ ->
                 let newStatement, nextRemainingTokens, statementErrors = parseToken remainingTokens.Head remainingTokens.Tail
-                parseTokens nextRemainingTokens (newStatement::statements) (statementErrors::errors)
+                if List.isEmpty statementErrors then
+                    parseTokens nextRemainingTokens (newStatement::statements)
+                else
+                    Errors(statementErrors)
 
-        parseTokens tokens [] []
+        parseTokens tokens []

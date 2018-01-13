@@ -21,20 +21,19 @@ module Parser_Tests =
             let foobar = 838383;
             "
         let tokens = input |> tokenizeInput
-        //let statements = tokens |> parseProgram
         let parserResults = tokens |> parseProgram
-        Assert.AreEqual(0, parserResults.Errors.Length)
-        Assert.AreEqual(3, parserResults.Statements.Length, "Statement Length")
+        match parserResults with
+        | Errors e -> Assert.Fail("Should not fail")
+        | Statements s -> 
+            Assert.AreEqual(3, s.Length, "Unexpected number of statements")
+            let expectedResults = [
+                "x"
+                "y"
+                "foobar"
+            ]
 
-        let expectedResults = [
-            "x"
-            "y"
-            "foobar"
-        ]
-
-        let statements = parserResults.Statements
-        for i in 0..expectedResults.Length-1 do
-            let statement = statements.Item(i)
-            testLetStatement statement (expectedResults.Item(i)) |> ignore
-
+            let statements = s
+            for i in 0..expectedResults.Length-1 do
+                let statement = s.Item(i)
+                testLetStatement statement (expectedResults.Item(i)) |> ignore
     

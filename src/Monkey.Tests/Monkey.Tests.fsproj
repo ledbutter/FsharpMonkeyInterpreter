@@ -55,6 +55,7 @@
     <Compile Include="Lexer_Tests.fs" />
     <Content Include="packages.config" />
     <Compile Include="Parser_Tests.fs" />
+    <Compile Include="Ast_Tests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

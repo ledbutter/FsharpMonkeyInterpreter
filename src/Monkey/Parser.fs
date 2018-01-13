@@ -48,7 +48,7 @@ module Parser =
                     (EmptyStatement() :> Statement, remainingTokens, parserErrors)
             | _ -> raise (ParseError("Unexpected token type"))
 
-        let rec parseTokens remainingTokens statements =
+        let rec parseTokens remainingTokens statements errors =
             let (|EndOfTokens|_|) (t: Token list) = 
                 if List.isEmpty t || t.Head.Type = EOF then 
                     Some () 
@@ -56,12 +56,13 @@ module Parser =
                     None
 
             match remainingTokens with
-            | EndOfTokens -> Statements(List.rev statements)
+            | EndOfTokens -> 
+                if List.isEmpty errors then
+                    Statements(List.rev statements)
+                else
+                    Errors(errors)
             | _ ->
                 let newStatement, nextRemainingTokens, statementErrors = parseToken remainingTokens.Head remainingTokens.Tail
-                if List.isEmpty statementErrors then
-                    parseTokens nextRemainingTokens (newStatement::statements)
-                else
-                    Errors(statementErrors)
+                parseTokens nextRemainingTokens (newStatement::statements) (errors@statementErrors)
 
-        parseTokens tokens []
+        parseTokens tokens [] []

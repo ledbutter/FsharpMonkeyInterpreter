@@ -6,19 +6,16 @@ module Ast =
     
     // todo: initial work based on source Go and porting as directly as possible to F#
     //  i imagine there's a more elegant way of doing this in F#
+    // could it be done using a DU???
 
     type Node =
         abstract member TokenLiteral: unit -> string
 
     type Statement =
         inherit Node
-        //abstract member Node: Node
-        //abstract member StatementNode: unit -> unit
 
     type Expression =
         inherit Node
-        //abstract member Node: Node
-        //abstract member ExpressionNode: unit -> unit
 
     type Program =
         {

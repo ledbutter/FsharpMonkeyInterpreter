@@ -46,6 +46,12 @@ module Parser =
                     (letStatement, nextRemainingTokens.Tail, [])
                 else
                     (EmptyStatement() :> Statement, remainingTokens, parserErrors)
+            | RETURN ->
+                let nextRemainingTokens = iterateUntil remainingTokens.[1..] SEMICOLON
+                // todo: create an actual expression
+                let value = EmptyExpression()
+                let returnStatement = {Token = currentToken; ReturnValue = value} :> Statement
+                (returnStatement, nextRemainingTokens.Tail, [])
             | _ -> raise (ParseError("Unexpected token type"))
 
         let rec parseTokens remainingTokens statements errors =

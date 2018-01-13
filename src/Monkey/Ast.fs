@@ -50,6 +50,16 @@ module Ast =
                 this.Token.Literal
         member this.TokenLiteral() = (this :> Statement).TokenLiteral()
 
+    type ReturnStatement =
+        {
+            Token: Token // the return token
+            ReturnValue: Expression
+        }
+        interface Statement with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Statement).TokenLiteral()
+
     type EmptyExpression =
         interface Expression with
             member this.TokenLiteral() =

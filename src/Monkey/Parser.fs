@@ -13,9 +13,11 @@ module Parser =
         | Statements of Statement List
         | Errors of string List
 
+    type OperatorPrecedence = Lowest = 1 | Equals = 2 | LessGreater = 3 | Sum = 4 | Product = 5 | Prefix = 6 | Call = 7
+
     let parseProgram tokens =
 
-        let parseToken currentToken (remainingTokens: Token list) =
+        let parseStatement currentToken (remainingTokens: Token list) =
 
             let expectPeek token tokenType =
                 if token.Type = tokenType then
@@ -28,7 +30,15 @@ module Parser =
                     iterableTokens                    
                 else
                     iterateUntil iterableTokens.Tail tokenType
-                
+
+            let parseIdentifier currentToken =
+                {Identifier.Token = currentToken; Value = currentToken.Literal}
+
+            let prefixParseFunctionMap = dict [(IDENT, parseIdentifier)]
+
+            let parseExpression precedence currentToken=
+                let prefixFunction = prefixParseFunctionMap.[currentToken.Type]
+                prefixFunction currentToken
 
             match currentToken.Type with
             | LET -> 
@@ -52,9 +62,19 @@ module Parser =
                 let value = EmptyExpression()
                 let returnStatement = {Token = currentToken; ReturnValue = value} :> Statement
                 (returnStatement, nextRemainingTokens.Tail, [])
-            | _ -> raise (ParseError("Unexpected token type"))
+            | _ ->
+                // everything else is considered an expression statement
+                let expression = parseExpression OperatorPrecedence.Lowest currentToken
+                let nextRemainingTokens =
+                    if remainingTokens.Head.Type = SEMICOLON then
+                        remainingTokens.Tail
+                    else
+                        remainingTokens
+                let expressionStatement = {ExpressionStatement.Token = currentToken; Expression = expression} :> Statement
+                (expressionStatement, nextRemainingTokens, [])
 
-        let rec parseTokens remainingTokens statements errors =
+
+        let rec parseStatements remainingTokens statements errors =
             let (|EndOfTokens|_|) (t: Token list) = 
                 if List.isEmpty t || t.Head.Type = EOF then 
                     Some () 
@@ -68,7 +88,7 @@ module Parser =
                 else
                     Errors(errors)
             | _ ->
-                let newStatement, nextRemainingTokens, statementErrors = parseToken remainingTokens.Head remainingTokens.Tail
-                parseTokens nextRemainingTokens (newStatement::statements) (errors@statementErrors)
+                let newStatement, nextRemainingTokens, statementErrors = parseStatement remainingTokens.Head remainingTokens.Tail
+                parseStatements nextRemainingTokens (newStatement::statements) (errors@statementErrors)
 
-        parseTokens tokens [] []
+        parseStatements tokens [] []

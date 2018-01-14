@@ -72,4 +72,25 @@ module Parser_Tests =
             for i in 0..expectedReturnValues.Length-1 do
                 let statement = s.Item(1)
                 testReturnStatement statement (expectedReturnValues.Item(1)) |> ignore
+
+    [<Test>]
+    let testIdentifierExpression() =
+        let input = "foobar;"
+
+        let tokens = input |> tokenizeInput
+        let parserResults = tokens |> parseProgram
+
+        match parserResults with
+        | Errors e -> 
+            e |> assertErrors
+        | Statements s -> 
+            Assert.AreEqual(1, s.Length, "Unexpected number of statements")
+            
+            let expressionStatement = s.Item(0) :?> ExpressionStatement
+            let identifier = expressionStatement.Expression :?> Identifier
+            Assert.AreEqual("foobar", identifier.Value)
+            Assert.AreEqual("foobar", identifier.TokenLiteral())
+
+
+
     

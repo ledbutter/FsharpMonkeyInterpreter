@@ -23,6 +23,10 @@ module Parser_Tests =
         let returnStatement = statement :?> ReturnStatement
         Assert.AreEqual("return", returnStatement.TokenLiteral())
 
+    let testIntegerLiteral intLiteral expectedValue =
+        Assert.AreEqual(expectedValue, intLiteral.Value)
+        Assert.AreEqual(expectedValue.ToString(), intLiteral.TokenLiteral())
+
     let generateResults input =
         let tokens = input |> tokenizeInput
         tokens |> parseProgram
@@ -100,5 +104,21 @@ module Parser_Tests =
             Assert.AreEqual(1, s.Length, "Unexpected number of statements")        
             let expressionStatement = s.Item(0) :?> ExpressionStatement
             let literal = expressionStatement.Expression :?> IntegerLiteral
-            Assert.AreEqual(5, literal.Value)
-            Assert.AreEqual("5", literal.TokenLiteral())
+            testIntegerLiteral literal 5 |> ignore
+
+    [<TestCase("!5", "!", 5)>]
+    [<TestCase("-15", "-", 15)>]
+    let testParsingPrefixExpressions input operator integerValue =
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Statements s ->
+            Assert.AreEqual(1, s.Length, "Unexpected number of statements")
+            let expressionStatement = s.Item(0) :?> ExpressionStatement
+            Assert.Fail("I need to figure out how to do this!")
+//            let prefixExpression = expressionStatement.Expression :?> PrefixExpression
+//            Assert.AreEqual(operator, prefixExpression.Operator)
+//            let integerLiteral = exp.Right :?> IntegerLiteral
+//            testIntegerLiteral integerLiteral integerValue |> ignore
+            

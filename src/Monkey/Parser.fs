@@ -31,24 +31,31 @@ module Parser =
                 else
                     iterateUntil iterableTokens.Tail tokenType
 
-            let parseIdentifier currentToken =
-                {Identifier.Token = currentToken; Value = currentToken.Literal} :> Expression
+            let parseIdentifier currentToken remainingTokens =
+                let identifier = {Identifier.Token = currentToken; Value = currentToken.Literal} :> Expression
+                (identifier, remainingTokens)
 
-            let parseIntegerLiteral currentToken =
+            let parseIntegerLiteral currentToken remainingTokens =
                 let parsed, value = System.Int64.TryParse(currentToken.Literal)
                 if parsed then
-                    {IntegerLiteral.Token = currentToken; Value = value} :> Expression
+                    let intLiteral = {IntegerLiteral.Token = currentToken; Value = value} :> Expression
+                    (intLiteral, remainingTokens)
                 else
                     let errorMessage = sprintf "Could not parse %s as an integer" currentToken.Literal
                     raise (ParseError errorMessage)
+
+            // todo: figure this out!!!
+//            let parsePrefixExpression currentToken remainingTokens =
+//                let right = parseExpression OperatorPrecedence.Prefix remainingTokens.Head remainingTokens.Tail
+//                (right, remainingTokens.Tail)
 
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [(IDENT, parseIdentifier); (INT, parseIntegerLiteral)]
 
-            let parseExpression precedence currentToken=
+            let parseExpression precedence currentToken remainingTokens =
                 let prefixFunction = prefixParseFunctionMap.[currentToken.Type]
-                prefixFunction currentToken
+                prefixFunction currentToken remainingTokens            
 
             match currentToken.Type with
             | LET -> 
@@ -74,12 +81,12 @@ module Parser =
                 (returnStatement, nextRemainingTokens.Tail, [])
             | _ ->
                 // everything else is considered an expression statement
-                let expression = parseExpression OperatorPrecedence.Lowest currentToken
+                let (expression, updatedRemaingTokens) = parseExpression OperatorPrecedence.Lowest currentToken remainingTokens
                 let nextRemainingTokens =
-                    if remainingTokens.Head.Type = SEMICOLON then
-                        remainingTokens.Tail
+                    if updatedRemaingTokens.Head.Type = SEMICOLON then
+                        updatedRemaingTokens.Tail
                     else
-                        remainingTokens
+                        updatedRemaingTokens
                 let expressionStatement = {ExpressionStatement.Token = currentToken; Expression = expression} :> Statement
                 (expressionStatement, nextRemainingTokens, [])
 

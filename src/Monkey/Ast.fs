@@ -96,6 +96,21 @@ module Ast =
         member this.TokenLiteral() = (this :> Expression).TokenLiteral()
         override x.ToString() =
             x.Token.Literal
+
+    type PrefixExpression =
+        {
+            Token: Token // the prefix token, e.g. !
+            Operator: string
+            Right: Expression
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            sprintf "(%s %s)" x.Operator (x.Right.ToString())
+
+
     // dummy types
 
     type EmptyExpression =

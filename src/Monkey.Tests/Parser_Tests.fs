@@ -23,6 +23,9 @@ module Parser_Tests =
         let returnStatement = statement :?> ReturnStatement
         Assert.AreEqual("return", returnStatement.TokenLiteral())
 
+    let generateResults input =
+        let tokens = input |> tokenizeInput
+        tokens |> parseProgram
 
     [<Test>]
     let testLetStatements() =
@@ -31,8 +34,7 @@ module Parser_Tests =
             let y = 10;
             let foobar = 838383;
             "
-        let tokens = input |> tokenizeInput
-        let parserResults = tokens |> parseProgram
+        let parserResults = input |> generateResults 
         match parserResults with
         | Errors e -> 
             e |> assertErrors
@@ -56,8 +58,7 @@ module Parser_Tests =
             return 10;
             return 993322;
             "
-        let tokens = input |> tokenizeInput
-        let parserResults = tokens |> parseProgram
+        let parserResults = input |> generateResults 
         match parserResults with
         | Errors e -> 
             e |> assertErrors
@@ -76,10 +77,7 @@ module Parser_Tests =
     [<Test>]
     let testIdentifierExpression() =
         let input = "foobar;"
-
-        let tokens = input |> tokenizeInput
-        let parserResults = tokens |> parseProgram
-
+        let parserResults = input |> generateResults 
         match parserResults with
         | Errors e -> 
             e |> assertErrors
@@ -91,6 +89,16 @@ module Parser_Tests =
             Assert.AreEqual("foobar", identifier.Value)
             Assert.AreEqual("foobar", identifier.TokenLiteral())
 
-
-
-    
+    [<Test>]
+    let testIntegerLiteralExpression() =
+        let input = "5;"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Statements s ->
+            Assert.AreEqual(1, s.Length, "Unexpected number of statements")        
+            let expressionStatement = s.Item(0) :?> ExpressionStatement
+            let literal = expressionStatement.Expression :?> IntegerLiteral
+            Assert.AreEqual(5, literal.Value)
+            Assert.AreEqual("5", literal.TokenLiteral())

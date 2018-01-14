@@ -32,9 +32,19 @@ module Parser =
                     iterateUntil iterableTokens.Tail tokenType
 
             let parseIdentifier currentToken =
-                {Identifier.Token = currentToken; Value = currentToken.Literal}
+                {Identifier.Token = currentToken; Value = currentToken.Literal} :> Expression
 
-            let prefixParseFunctionMap = dict [(IDENT, parseIdentifier)]
+            let parseIntegerLiteral currentToken =
+                let parsed, value = System.Int64.TryParse(currentToken.Literal)
+                if parsed then
+                    {IntegerLiteral.Token = currentToken; Value = value} :> Expression
+                else
+                    let errorMessage = sprintf "Could not parse %s as an integer" currentToken.Literal
+                    raise (ParseError errorMessage)
+
+            // todo: there has to be a more elegant way of doing this:
+            //      we are mapping strings to funcs
+            let prefixParseFunctionMap = dict [(IDENT, parseIdentifier); (INT, parseIntegerLiteral)]
 
             let parseExpression precedence currentToken=
                 let prefixFunction = prefixParseFunctionMap.[currentToken.Type]

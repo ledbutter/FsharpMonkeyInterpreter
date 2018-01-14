@@ -34,10 +34,6 @@ module Ast =
             |> Seq.fold(fun (sb:System.Text.StringBuilder) s ->
                 sb.Append(s)) (new System.Text.StringBuilder())
             |> fun x -> x.ToString()
-//            let sb = new System.Text.StringBuilder()
-//            for s in 0..x.Statements.Length do
-//                sb.Append(s.ToString()) |> ignore
-//            sb.ToString()
 
     type Identifier = 
         {
@@ -88,6 +84,19 @@ module Ast =
         member this.TokenLiteral() = (this :> Statement).TokenLiteral()
         override x.ToString() =
             x.Expression.ToString()
+
+    type IntegerLiteral = 
+        {
+            Token: Token
+            Value: int64
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            x.Token.Literal
+    // dummy types
 
     type EmptyExpression =
         interface Expression with

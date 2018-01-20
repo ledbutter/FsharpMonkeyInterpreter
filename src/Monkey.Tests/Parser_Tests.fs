@@ -120,4 +120,26 @@ module Parser_Tests =
             Assert.AreEqual(operator, prefixExpression.Operator)
             let integerLiteral = prefixExpression.Right :?> IntegerLiteral
             testIntegerLiteral integerLiteral integerValue |> ignore
-            
+
+    [<TestCase("5 + 5;", 5, "+", 5)>]
+    [<TestCase("5 - 5;", 5, "-", 5)>]
+    [<TestCase("5 * 5;", 5, "*", 5)>]
+    [<TestCase("5 / 5;", 5, "/", 5)>]
+    [<TestCase("5 > 5;", 5, ">", 5)>]
+    [<TestCase("5 < 5;", 5, "<", 5)>]
+    [<TestCase("5 == 5;", 5, "==", 5)>]
+    [<TestCase("5 != 5;", 5, "!=", 5)>]
+    let testParsingInfixExpressions input expectedLeftValue expectedOperator expectedRightValue =
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Statements s ->
+            Assert.AreEqual(1, s.Length, "Unexpected number of statements")
+            let expressionStatement = s.Item(0) :?> ExpressionStatement
+            let infixExpression = expressionStatement.Expression :?> InfixExpression
+            let leftValue = infixExpression.Left :?> IntegerLiteral
+            testIntegerLiteral leftValue expectedLeftValue |> ignore
+            let rightValue = infixExpression.Right :?> IntegerLiteral
+            testIntegerLiteral rightValue expectedRightValue |> ignore
+            Assert.AreEqual(expectedOperator, infixExpression.Operator)

@@ -17,6 +17,22 @@ module Parser =
 
     let parseProgram tokens =
 
+        let precedences = dict[ EQ, OperatorPrecedence.Equals;
+                                NOT_EQ, OperatorPrecedence.Equals;
+                                LT, OperatorPrecedence.LessGreater;
+                                GT, OperatorPrecedence.LessGreater;
+                                PLUS, OperatorPrecedence.Sum;
+                                MINUS, OperatorPrecedence.Sum;
+                                SLASH, OperatorPrecedence.Product;
+                                ASTERISK, OperatorPrecedence.Product;]
+
+        let getPrecedence token =
+            let found, p = precedences.TryGetValue token.Type
+            if found then
+                p
+            else
+                OperatorPrecedence.Lowest
+
         let parseStatement currentToken (remainingTokens: Token list) =
 
             let expectPeek token tokenType =
@@ -49,13 +65,27 @@ module Parser =
                 let prefixExpression = {PrefixExpression.Token = currentToken; Operator = currentToken.Literal; Right = right} :> Expression
                 (prefixExpression, newRemaining)
 
+            let parseInfixExpression left currentToken remainingTokens parseNext =
+                let precedence = getPrecedence currentToken
+                let (right, newRemaining) = parseNext precedence (List.head remainingTokens) (List.tail remainingTokens)
+                let infixExpression = {InfixExpression.Left = left; Token = currentToken; Operator = currentToken.Literal; Right = right} :> Expression
+                (infixExpression, newRemaining)
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
-            let prefixParseFunctionMap = dict [(IDENT, parseIdentifier); (INT, parseIntegerLiteral); (BANG, parsePrefixExpression); (MINUS, parsePrefixExpression);]
+            let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
+                                                INT, parseIntegerLiteral;
+                                                BANG, parsePrefixExpression;
+                                                MINUS, parsePrefixExpression;]
 
-            let rec parseExpression precedence currentToken remainingTokens =
-                let prefixFunction = prefixParseFunctionMap.[currentToken.Type]
-                prefixFunction currentToken remainingTokens parseExpression          
+            let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
+                                                MINUS, parseInfixExpression;
+                                                SLASH, parseInfixExpression;
+                                                ASTERISK, parseInfixExpression;
+                                                EQ, parseInfixExpression;
+                                                NOT_EQ, parseInfixExpression;
+                                                LT, parseInfixExpression;
+                                                GT, parseInfixExpression;]
 
             match currentToken.Type with
             | LET -> 
@@ -83,6 +113,34 @@ module Parser =
                 (returnStatement, nextRemainingTokens.Tail, [])
             | _ ->
                 // everything else is considered an expression statement
+
+                let rec parseExpression precedence currentToken remainingTokens =
+                    let reachedEndCondition token =
+                        token.Type = SEMICOLON || token |> getPrecedence >= precedence
+
+                    let found, prefixFunction = prefixParseFunctionMap.TryGetValue currentToken.Type
+                    if found then
+                        let seedLeft, seedRemaining = prefixFunction currentToken remainingTokens parseExpression
+                        if (List.isEmpty seedRemaining) || seedRemaining.Head |> reachedEndCondition then
+                            seedLeft, seedRemaining
+                        else
+                            let rec applyInfix token remainingTokens' currentLeft =
+                                match remainingTokens' with
+                                | [] -> (currentLeft, [])
+                                | x::xs when x |> reachedEndCondition -> (currentLeft, remainingTokens')
+                                | x::xs ->
+                                    let found, infixFunction = infixParseFunctionMap.TryGetValue x.Type
+                                    if found then
+                                        let newCurrentInfix, newCurrentRemaining = infixFunction currentLeft x xs parseExpression
+                                        applyInfix (List.head newCurrentRemaining) (List.tail newCurrentRemaining) newCurrentInfix
+                                    else
+                                        (currentLeft, remainingTokens')
+
+                            applyInfix seedRemaining.Head seedRemaining.Tail seedLeft
+                    else
+                        raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))
+
+
                 let (expression, updatedRemainingTokens) = parseExpression OperatorPrecedence.Lowest currentToken remainingTokens
                 let nextRemainingTokens =
                     match updatedRemainingTokens with

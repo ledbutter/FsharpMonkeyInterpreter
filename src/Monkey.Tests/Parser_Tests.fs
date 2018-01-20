@@ -143,23 +143,3 @@ module Parser_Tests =
             let rightValue = infixExpression.Right :?> IntegerLiteral
             testIntegerLiteral rightValue expectedRightValue |> ignore
             Assert.AreEqual(expectedOperator, infixExpression.Operator)
-
-    //[<Test>]
-    //let whatIsWrong() =
-    //    let input = "5 + 5;"
-    //    try
-    //        let parserResults = input |> generateResults
-    //        match parserResults with
-    //        | Errors e ->
-    //            e |> assertErrors
-    //        | Statements s ->
-    //            Assert.AreEqual(1, s.Length, "Unexpected number of statements")
-    //            let expressionStatement = s.Item(0) :?> ExpressionStatement
-    //            let infixExpression = expressionStatement.Expression :?> InfixExpression
-    //            let leftValue = infixExpression.Left :?> IntegerLiteral
-    //            testIntegerLiteral leftValue 5 |> ignore
-    //            let rightValue = infixExpression.Right :?> IntegerLiteral
-    //            testIntegerLiteral rightValue 5 |> ignore
-    //            Assert.AreEqual("+", infixExpression.Operator)
-    //    with
-    //    | ex -> printfn "Error %s" (ex.Message)

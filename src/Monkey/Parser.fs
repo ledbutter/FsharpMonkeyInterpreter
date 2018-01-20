@@ -113,35 +113,35 @@ module Parser =
             | _ ->
                 // everything else is considered an expression statement
 
+                // this parseExpression algorithm is an example of Pratt parsing
                 let rec parseExpression precedence currentToken remainingTokens =
                     let reachedEndCondition token =
                         token.Type = SEMICOLON || (token |> getPrecedence <= precedence)
 
+                    let rec applyInfix token remainingTokens' currentInfix =
+                        if token |> reachedEndCondition then
+                            (currentInfix, [])
+                        else
+                            let found, infixFunction = infixParseFunctionMap.TryGetValue token.Type
+
+                            if found then
+                                let newCurrentInfix, newCurrentRemaining = infixFunction currentInfix token remainingTokens' parseExpression
+                                match newCurrentRemaining with
+                                | [] -> (newCurrentInfix, [])
+                                | x::xs -> applyInfix x xs newCurrentInfix
+                            else
+                                (currentInfix, [])
+
                     let found, prefixFunction = prefixParseFunctionMap.TryGetValue currentToken.Type
                     if found then
                         let left, remaining = prefixFunction currentToken remainingTokens parseExpression
-
-                        if (List.isEmpty remaining) || remaining.Head |> reachedEndCondition then
-                            left, []
-                        else
-                            let rec applyInfix token remainingTokens' currentInfix =
-                                if token |> reachedEndCondition then
-                                    (currentInfix, [])
-                                else
-                                    let found, infixFunction = infixParseFunctionMap.TryGetValue token.Type
-
-                                    if found then
-                                        let newCurrentInfix, newCurrentRemaining = infixFunction currentInfix token remainingTokens' parseExpression
-                                        match newCurrentRemaining with
-                                        | [] -> (newCurrentInfix, [])
-                                        | x::xs -> applyInfix x xs newCurrentInfix
-                                    else
-                                        (currentInfix, [])
-
-                            applyInfix remaining.Head remaining.Tail left
+                        match remaining with
+                        | [] -> (left, [])
+                        | x::_ when x |> reachedEndCondition -> (left, [])
+                        | x::xs ->
+                            applyInfix x xs left
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))
-
 
                 let (expression, updatedRemainingTokens) = parseExpression OperatorPrecedence.Lowest currentToken remainingTokens
                 let nextRemainingTokens =
@@ -154,7 +154,6 @@ module Parser =
                         tokens
                 let expressionStatement = {ExpressionStatement.Token = currentToken; Expression = expression} :> Statement
                 (expressionStatement, nextRemainingTokens, [])
-
 
         let rec parseStatements remainingTokens statements errors =
             let (|EndOfTokens|_|) (t: Token list) = 

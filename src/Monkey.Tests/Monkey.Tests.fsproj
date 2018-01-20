@@ -10,7 +10,7 @@
     <RootNamespace>Interpreter.Tests</RootNamespace>
     <AssemblyName>Monkey.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
+    <TargetFSharpCoreVersion>4.4.1.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>Monkey.Tests</Name>
     <TargetFrameworkProfile />

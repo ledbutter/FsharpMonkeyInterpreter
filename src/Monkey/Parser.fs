@@ -1,7 +1,6 @@
 ﻿namespace Monkey
 
 open Monkey.Ast
-open Monkey.Lexer2
 open Monkey.Token
 
 
@@ -116,27 +115,30 @@ module Parser =
 
                 let rec parseExpression precedence currentToken remainingTokens =
                     let reachedEndCondition token =
-                        token.Type = SEMICOLON || token |> getPrecedence >= precedence
+                        token.Type = SEMICOLON || (token |> getPrecedence <= precedence)
 
                     let found, prefixFunction = prefixParseFunctionMap.TryGetValue currentToken.Type
                     if found then
-                        let seedLeft, seedRemaining = prefixFunction currentToken remainingTokens parseExpression
-                        if (List.isEmpty seedRemaining) || seedRemaining.Head |> reachedEndCondition then
-                            seedLeft, seedRemaining
-                        else
-                            let rec applyInfix token remainingTokens' currentLeft =
-                                match remainingTokens' with
-                                | [] -> (currentLeft, [])
-                                | x::xs when x |> reachedEndCondition -> (currentLeft, remainingTokens')
-                                | x::xs ->
-                                    let found, infixFunction = infixParseFunctionMap.TryGetValue x.Type
-                                    if found then
-                                        let newCurrentInfix, newCurrentRemaining = infixFunction currentLeft x xs parseExpression
-                                        applyInfix (List.head newCurrentRemaining) (List.tail newCurrentRemaining) newCurrentInfix
-                                    else
-                                        (currentLeft, remainingTokens')
+                        let left, remaining = prefixFunction currentToken remainingTokens parseExpression
 
-                            applyInfix seedRemaining.Head seedRemaining.Tail seedLeft
+                        if (List.isEmpty remaining) || remaining.Head |> reachedEndCondition then
+                            left, []
+                        else
+                            let rec applyInfix token remainingTokens' currentInfix =
+                                if token |> reachedEndCondition then
+                                    (currentInfix, [])
+                                else
+                                    let found, infixFunction = infixParseFunctionMap.TryGetValue token.Type
+
+                                    if found then
+                                        let newCurrentInfix, newCurrentRemaining = infixFunction currentInfix token remainingTokens' parseExpression
+                                        match newCurrentRemaining with
+                                        | [] -> (newCurrentInfix, [])
+                                        | x::xs -> applyInfix x xs newCurrentInfix
+                                    else
+                                        (currentInfix, [])
+
+                            applyInfix remaining.Head remaining.Tail left
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))
 
@@ -146,7 +148,7 @@ module Parser =
                     match updatedRemainingTokens with
                     | [] ->
                         []
-                    | x::xs when x.Type = SEMICOLON -> 
+                    | x::_ when x.Type = SEMICOLON -> 
                         (List.tail updatedRemainingTokens)
                     | (tokens) ->
                         tokens

@@ -116,9 +116,8 @@ module Parser_Tests =
         | Statements s ->
             Assert.AreEqual(1, s.Length, "Unexpected number of statements")
             let expressionStatement = s.Item(0) :?> ExpressionStatement
-            Assert.Fail("I need to figure out how to do this!")
-//            let prefixExpression = expressionStatement.Expression :?> PrefixExpression
-//            Assert.AreEqual(operator, prefixExpression.Operator)
-//            let integerLiteral = exp.Right :?> IntegerLiteral
-//            testIntegerLiteral integerLiteral integerValue |> ignore
+            let prefixExpression = expressionStatement.Expression :?> PrefixExpression
+            Assert.AreEqual(operator, prefixExpression.Operator)
+            let integerLiteral = prefixExpression.Right :?> IntegerLiteral
+            testIntegerLiteral integerLiteral integerValue |> ignore
             

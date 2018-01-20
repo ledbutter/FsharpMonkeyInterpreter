@@ -23,7 +23,7 @@ module Parser_Tests =
         let returnStatement = statement :?> ReturnStatement
         Assert.AreEqual("return", returnStatement.TokenLiteral())
 
-    let testIntegerLiteral intLiteral expectedValue =
+    let testIntegerLiteral (intLiteral:IntegerLiteral) (expectedValue:int64) =
         Assert.AreEqual(expectedValue, intLiteral.Value)
         Assert.AreEqual(expectedValue.ToString(), intLiteral.TokenLiteral())
 
@@ -104,7 +104,7 @@ module Parser_Tests =
             Assert.AreEqual(1, s.Length, "Unexpected number of statements")        
             let expressionStatement = s.Item(0) :?> ExpressionStatement
             let literal = expressionStatement.Expression :?> IntegerLiteral
-            testIntegerLiteral literal 5 |> ignore
+            testIntegerLiteral literal 5L |> ignore
 
     [<TestCase("!5", "!", 5)>]
     [<TestCase("-15", "-", 15)>]
@@ -143,3 +143,16 @@ module Parser_Tests =
             let rightValue = infixExpression.Right :?> IntegerLiteral
             testIntegerLiteral rightValue expectedRightValue |> ignore
             Assert.AreEqual(expectedOperator, infixExpression.Operator)
+
+    [<TestCase("true", true)>]
+    [<TestCase("false", false)>]
+    let testBooleanExpression input expectedResult =
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Statements s ->
+            Assert.AreEqual(1, s.Length, "Unexpected number of statements")
+            let expressionStatement = s.Item(0) :?> ExpressionStatement
+            let booleanExpression = expressionStatement.Expression :?> Boolean
+            Assert.AreEqual(expectedResult, booleanExpression.Value)

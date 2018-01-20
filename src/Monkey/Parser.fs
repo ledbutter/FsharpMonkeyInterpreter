@@ -70,12 +70,23 @@ module Parser =
                 let infixExpression = {InfixExpression.Left = left; Token = currentToken; Operator = currentToken.Literal; Right = right} :> Expression
                 (infixExpression, newRemaining)
 
+            let parseBoolean currentToken remainingTokens _ =
+                let parsed, value = System.Boolean.TryParse(currentToken.Literal)
+                if parsed then
+                    let boolean = {Boolean.Token = currentToken; Value = value} :> Expression
+                    (boolean, remainingTokens)
+                else
+                    let errorMessage = sprintf "Could not parse %s as a boolean" currentToken.Literal
+                    raise (ParseError errorMessage)
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
                                                 INT, parseIntegerLiteral;
                                                 BANG, parsePrefixExpression;
-                                                MINUS, parsePrefixExpression;]
+                                                MINUS, parsePrefixExpression;
+                                                TRUE, parseBoolean;
+                                                FALSE, parseBoolean;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

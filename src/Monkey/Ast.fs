@@ -124,6 +124,18 @@ module Ast =
         override x.ToString() =
             sprintf "(%s %s %s)" (x.Left.ToString()) x.Operator (x.Right.ToString())
 
+    type Boolean =
+        {
+            Token: Token
+            Value: bool
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            sprintf "%s" (x.TokenLiteral())
+
     // dummy types
 
     type EmptyExpression =

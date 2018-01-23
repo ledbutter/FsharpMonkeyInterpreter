@@ -34,6 +34,7 @@ module Parser =
 
         let parseStatement currentToken (remainingTokens: Token list) =
 
+            //todo: convert this to a Some/None construct
             let expectPeek token tokenType =
                 if token.Type = tokenType then
                     []
@@ -79,6 +80,13 @@ module Parser =
                     let errorMessage = sprintf "Could not parse %s as a boolean" currentToken.Literal
                     raise (ParseError errorMessage)
 
+            let parseGroupedExpression _ remainingTokens parseNext =
+                let (expression, newRemaining) = parseNext OperatorPrecedence.Lowest (List.head remainingTokens) (List.tail remainingTokens)
+                let peekResult = expectPeek (List.head newRemaining) RPAREN
+                match peekResult with
+                | [] -> (expression, newRemaining)
+                | errors -> raise (ParseError (List.head errors))
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
@@ -86,7 +94,8 @@ module Parser =
                                                 BANG, parsePrefixExpression;
                                                 MINUS, parsePrefixExpression;
                                                 TRUE, parseBoolean;
-                                                FALSE, parseBoolean;]
+                                                FALSE, parseBoolean;
+                                                LPAREN, parseGroupedExpression;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;
@@ -147,9 +156,14 @@ module Parser =
                     if found then
                         let left, remaining = prefixFunction currentToken remainingTokens parseExpression
                         match remaining with
-                        | [] -> (left, [])
-                        | x::_ when x |> reachedEndCondition -> (left, [])
+                        | [] -> 
+                            printfn "None remaining in parseExpression with left %A" left
+                            (left, [])
+                        | x::_ when x |> reachedEndCondition -> 
+                            printfn "Reached end condition in parseExpression with left %A" left
+                            (left, [])
                         | x::xs ->
+                            printfn "Calling applyInfix with left %A and remaining %A" left remaining
                             applyInfix x xs left
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))

@@ -108,7 +108,7 @@ module Ast =
                 this.Token.Literal
         member this.TokenLiteral() = (this :> Expression).TokenLiteral()
         override x.ToString() =
-            sprintf "(%s %s)" x.Operator (x.Right.ToString())
+            sprintf "(%s%s)" x.Operator (x.Right.ToString())
 
     type InfixExpression =
         {

@@ -9,7 +9,7 @@ module Parser =
     exception ParseError of string
 
     type ParserOutput =
-        | Statements of Statement List
+        | Program of Program
         | Errors of string List
 
     type OperatorPrecedence = Lowest = 1 | Equals = 2 | LessGreater = 3 | Sum = 4 | Product = 5 | Prefix = 6 | Call = 7
@@ -190,7 +190,7 @@ module Parser =
             match remainingTokens with
             | EndOfTokens -> 
                 if List.isEmpty errors then
-                    Statements(List.rev statements)
+                    Program({Program.Statements = (List.rev statements)})
                 else
                     Errors(errors)
             | _ ->

@@ -66,9 +66,6 @@ module Parser =
                 (prefixExpression, newRemaining)
 
             let parseInfixExpression left currentToken remainingTokens parseNext =
-                printfn "Parsing infix with currentToken %A and remaining tokens %A" currentToken remainingTokens
-
-
                 let precedence = getPrecedence currentToken
                 let (right, newRemaining) = parseNext precedence (List.head remainingTokens) (List.tail remainingTokens)
                 let infixExpression = {InfixExpression.Left = left; Token = currentToken; Operator = currentToken.Literal; Right = right} :> Expression
@@ -84,12 +81,7 @@ module Parser =
                     raise (ParseError errorMessage)
 
             let parseGroupedExpression _ remainingTokens parseNext =
-                printfn "Attempting to parse grouped expression with head %A" (List.head remainingTokens)
-
                 let (expression, newRemaining) = parseNext OperatorPrecedence.Lowest (List.head remainingTokens) (List.tail remainingTokens)
-
-                printfn "Parsed group expression, new remaining %A" newRemaining
-
                 let peekResult = expectPeek (List.head newRemaining) RPAREN
                 match peekResult with
                 | [] -> (expression, (List.tail newRemaining))

@@ -32,7 +32,7 @@ module Parser =
             else
                 OperatorPrecedence.Lowest
 
-        let parseStatement currentToken (remainingTokens: Token list) =
+        let rec parseStatement currentToken (remainingTokens: Token list) =
 
             //todo: convert this to a Some/None construct
             let expectPeek token tokenType =
@@ -95,6 +95,24 @@ module Parser =
                 | [] -> (expression, (List.tail newRemaining))
                 | errors -> raise (ParseError (List.head errors))
 
+            //let parseBlockStatement currentToken remainingTokens =
+            //    // keep going until rbrace or EOF
+
+            let parseIfExpression currentToken remainingTokens parseNext =
+                let peekResult = expectPeek (List.head remainingTokens) LPAREN
+                match peekResult with
+                | [] ->
+                    let (condition, newRemaining) = parseNext OperatorPrecedence.Lowest remainingTokens.[1] remainingTokens.[2..]
+                    let rParenPeekResult = expectPeek (List.head newRemaining) RPAREN
+                    match rParenPeekResult with
+                    | [] ->
+                        let consequenceStart = iterateUntil (List.tail newRemaining) LBRACE
+                        raise (ParseError("Implement me!!!"))
+                        //let consequence = 
+                    | errors -> raise (ParseError (List.head errors))
+                | errors -> raise (ParseError (List.head errors))
+
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
@@ -103,7 +121,8 @@ module Parser =
                                                 MINUS, parsePrefixExpression;
                                                 TRUE, parseBoolean;
                                                 FALSE, parseBoolean;
-                                                LPAREN, parseGroupedExpression;]
+                                                LPAREN, parseGroupedExpression;
+                                                IF, parseIfExpression;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

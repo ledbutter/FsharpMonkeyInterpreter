@@ -168,3 +168,22 @@ module Parser_Tests =
             e |> assertErrors
         | Program p ->
             Assert.AreEqual(expectedResult, p.ToString())
+
+    let testIfExpression() =
+        let input = "if (x < y) { x } else { y }"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let expressionStatement = p.Statements.Item(0) :?> ExpressionStatement
+            let ifExpression = expressionStatement.Expression :?> IfExpression
+            let conditionInfixExpression = ifExpression.Condition :?> InfixExpression
+            Assert.AreEqual("x", conditionInfixExpression.Left.TokenLiteral())
+            Assert.AreEqual("<", conditionInfixExpression.Operator)
+            Assert.AreEqual("y", conditionInfixExpression.Right.TokenLiteral())
+            Assert.AreEqual(1, ifExpression.Consequence.Statements.Length)
+            let consequence = ifExpression.Consequence.Statements.Item(1) :?> ExpressionStatement
+            Assert.AreEqual("x", consequence.TokenLiteral())
+            Assert.AreEqual(1, ifExpression.Alternative.Statements.Length)

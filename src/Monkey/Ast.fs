@@ -136,6 +136,36 @@ module Ast =
         override x.ToString() =
             sprintf "%s" (x.TokenLiteral())
 
+    type BlockStatement =
+        {
+            Token: Token
+            Statements: Statement list
+        }
+        interface Statement with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Statement).TokenLiteral()
+        override x.ToString() =
+            x.Statements
+            |> Seq.map(fun s -> s.ToString())
+            |> Seq.fold(fun (sb:System.Text.StringBuilder) s ->
+                sb.Append(s)) (new System.Text.StringBuilder())
+            |> fun x -> x.ToString()
+
+    type IfExpression =
+        {
+            Token: Token
+            Condition: Expression
+            Consequence: BlockStatement
+            Alternative: BlockStatement
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            sprintf "if %s %s else %s" (x.Condition.ToString()) (x.Consequence.ToString()) (x.Alternative.ToString())
+
     // dummy types
 
     type EmptyExpression =

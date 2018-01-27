@@ -95,19 +95,43 @@ module Parser =
                 | [] -> (expression, (List.tail newRemaining))
                 | errors -> raise (ParseError (List.head errors))
 
-            //let parseBlockStatement currentToken remainingTokens =
-            //    // keep going until rbrace or EOF
+            let parseBlockStatement currentToken remainingTokens =
+                // keep going until rbrace or EOF
+                let reachedEndCondition token =
+                    token.Type = RBRACE || token.Type = EOF
+                
+                let rec parseBlockStatementRec current remaining statements =
+                    if (List.isEmpty remaining) || reachedEndCondition current then
+                        ({BlockStatement.Token = currentToken; Statements = statements}, remaining)
+                    else
+                        // ignoring any errors here, so what
+                        let (nextStatement, remaining', _) = parseStatement current remaining
+                        parseBlockStatementRec (List.head remaining') (List.tail remaining') (nextStatement::statements)
+
+                parseBlockStatementRec currentToken remainingTokens []
 
             let parseIfExpression currentToken remainingTokens parseNext =
                 let peekResult = expectPeek (List.head remainingTokens) LPAREN
                 match peekResult with
                 | [] ->
+                    let emptyAlternative = {BlockStatement.Token = {Type = ""; Literal = ""}; Statements = List.empty}
                     let (condition, newRemaining) = parseNext OperatorPrecedence.Lowest remainingTokens.[1] remainingTokens.[2..]
                     let rParenPeekResult = expectPeek (List.head newRemaining) RPAREN
                     match rParenPeekResult with
                     | [] ->
                         let consequenceStart = iterateUntil (List.tail newRemaining) LBRACE
-                        raise (ParseError("Implement me!!!"))
+                        let (consequence, nextRemaining) = parseBlockStatement consequenceStart.[1] consequenceStart.[2..]
+                        match nextRemaining with
+                        | [] -> 
+                            let ifExpression = {IfExpression.Token = currentToken; Condition = condition; Consequence = consequence; Alternative = emptyAlternative}
+                            (ifExpression :> Expression, [])
+                        | x::xs when x.Type = ELSE && (List.head xs).Type = LBRACE ->
+                            let (alternative, finalRemaining) = parseBlockStatement xs.[1] xs.[2..]
+                            let ifExpression = {IfExpression.Token = currentToken; Condition = condition; Consequence = consequence; Alternative = alternative}
+                            (ifExpression :> Expression, finalRemaining)
+                        | _ ->
+                            let ifExpression = {IfExpression.Token = currentToken; Condition = condition; Consequence = consequence; Alternative = emptyAlternative}
+                            (ifExpression :> Expression, [])
                         //let consequence = 
                     | errors -> raise (ParseError (List.head errors))
                 | errors -> raise (ParseError (List.head errors))

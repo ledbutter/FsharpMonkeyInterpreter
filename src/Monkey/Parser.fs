@@ -157,13 +157,13 @@ module Parser =
                         let left, remaining = prefixFunction currentToken remainingTokens parseExpression
                         match remaining with
                         | [] -> 
-                            printfn "None remaining in parseExpression with left %A" left
+                            //printfn "None remaining in parseExpression with left %A" left
                             (left, [])
                         | x::_ when x |> reachedEndCondition -> 
-                            printfn "Reached end condition in parseExpression with left %A" left
-                            (left, [])
+                            //printfn "Reached end condition in parseExpression with left %A, head %A and precedence %A" left x precedence
+                            (left, remaining)
                         | x::xs ->
-                            printfn "Calling applyInfix with left %A and remaining %A" left remaining
+                            //printfn "Calling applyInfix with left %A and remaining %A" left remaining
                             applyInfix x xs left
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))

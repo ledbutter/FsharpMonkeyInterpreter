@@ -1,8 +1,6 @@
 ﻿namespace Tests
 
 open NUnit.Framework
-open Monkey.Parser
-open Monkey.Lexer2
 open Monkey.Ast
 open Monkey.Token
 

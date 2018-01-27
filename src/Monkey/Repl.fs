@@ -2,8 +2,7 @@
 
 open System
 open System.IO
-open Token
-open Lexer2
+open Lexer
 
 module Repl =
 

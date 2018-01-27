@@ -2,31 +2,13 @@
 open Token
 open System
 
-// this is the old, more Go-ish start at doing this, I abandoned it for Lexer2 where we just parse everything at once
-// and avoid a lot of state tracking
 module Lexer =
 
-    exception UnknownCharacter of char
+    type LexerPosition = { Pos : int; ReadPos : int; CurrentChar : char }
 
-    let emptyChar = (char 0)
+    let tokenizeInput (input:string) =
+        let emptyChar = (char 0)
 
-    // todo: there has to be a better way than copying the Input around for each lexer!
-    type Lexer = { Input : string; Position: int; ReadPosition : int; CurrentChar : char }
-
-    let readChar l =
-        let incrementLexer newCurrentChar =
-            {l with CurrentChar = newCurrentChar; Position = l.ReadPosition; ReadPosition = l.ReadPosition + 1}
-
-        if l.ReadPosition >= l.Input.Length then
-            incrementLexer emptyChar
-        else
-            incrementLexer l.Input.[l.ReadPosition]
-
-    let createLexer s =
-        let l = {Input = s; Position = 0; ReadPosition = 0; CurrentChar = emptyChar}
-        readChar l 
-
-    let nextToken l =
         let newToken literal tokenType =
             {Type = tokenType; Literal = literal}
 
@@ -36,63 +18,108 @@ module Lexer =
         let isNumber ch =
             Char.IsNumber(ch)
 
-        let readIdentifier l =
-            let position = l.Position
-            let input = l.Input
-            let rec readIdentiferUntilNotChar lex =
-                match isLetter lex.CurrentChar with
-                | true -> 
-                    let newLexer = readChar lex
-                    readIdentiferUntilNotChar newLexer
-                | false -> (lex, input.[position..lex.Position-1])
-            readIdentiferUntilNotChar l
+        let incrementPosition lexerPos =
+            let incrementPartial newCurrentChar =
+                {lexerPos with CurrentChar = newCurrentChar; Pos = lexerPos.ReadPos; ReadPos = lexerPos.ReadPos + 1}
 
-        let skipWhitespace l =
+            if lexerPos.ReadPos >= input.Length then
+                incrementPartial emptyChar
+            else
+                incrementPartial input.[lexerPos.ReadPos]
+
+        let skipWhitespace lexerPos =
             let isWhitespace ch =
                 Char.IsWhiteSpace(ch)
-            let rec skipWhitespaceRec lex =
-                match isWhitespace lex.CurrentChar with
-                | true -> 
-                    let newLexer = readChar lex
-                    skipWhitespaceRec newLexer
-                | false -> lex
-            skipWhitespaceRec l
-            
-        let readNumber l =
-            let rec readNumberRec lex pos =
-                match isNumber lex.CurrentChar with
+            let rec skipWhitespaceRec currentLexerPos =
+                match isWhitespace currentLexerPos.CurrentChar with
                 | true ->
-                    let newLexer = readChar lex
-                    readNumberRec newLexer (pos + 1)
-                | false -> 
-                    let numberValue = lex.Input.Substring(l.Position, lex.Position - l.Position)
-                    (lex, numberValue)
-            readNumberRec l l.Position
+                    let newPos = incrementPosition currentLexerPos
+                    skipWhitespaceRec newPos
+                | false ->
+                    currentLexerPos
+            skipWhitespaceRec lexerPos
 
-        let wsLexer = skipWhitespace l
+        let readIdentifier lexerPos =
+            let position = lexerPos.Pos
+            let rec readIdentiferUntilNotChar currentLexPos =
+                match isLetter currentLexPos.CurrentChar with
+                | true -> 
+                    let newPos = incrementPosition currentLexPos
+                    readIdentiferUntilNotChar newPos
+                | false -> (currentLexPos, input.[position..currentLexPos.Pos-1])
+            readIdentiferUntilNotChar lexerPos
 
-        let partialToken = newToken (wsLexer.CurrentChar.ToString())
+        let readNumber lexerPos =
+            let rec readNumberRec currentLexPos =
+                match isNumber currentLexPos.CurrentChar with
+                | true ->
+                    let newPos = incrementPosition currentLexPos
+                    readNumberRec newPos
+                | false ->
+                    let numberValue = input.[lexerPos.Pos..currentLexPos.Pos-1]
+                    (currentLexPos, numberValue)
+            readNumberRec lexerPos
 
-        match wsLexer.CurrentChar with
-            | '=' -> (readChar wsLexer, partialToken ASSIGN)
-            | ';' -> (readChar wsLexer, partialToken SEMICOLON)
-            | '(' -> (readChar wsLexer, partialToken LPAREN)
-            | ')' -> (readChar wsLexer, partialToken RPAREN)
-            | ',' -> (readChar wsLexer, partialToken COMMA)
-            | '+' -> (readChar wsLexer, partialToken PLUS)
-            | '{' -> (readChar wsLexer, partialToken LBRACE)
-            | '}' -> (readChar wsLexer, partialToken RBRACE)
-            | _ -> 
-                if isLetter wsLexer.CurrentChar then
-                    let newLexer, identifier = readIdentifier wsLexer
-                    let tokenType = lookupIdent identifier
-                    let token = newToken identifier tokenType
-                    (newLexer, token)
-                else if isNumber wsLexer.CurrentChar then
-                    let newLexer, numberValue = readNumber wsLexer
-                    let token = newToken numberValue INT
-                    (newLexer, token)
-                else if wsLexer.CurrentChar = emptyChar then
-                    (readChar wsLexer, partialToken EOF)
-                else
-                    (readChar wsLexer, partialToken ILLEGAL)
+        let peekChar lexerPos =
+            if lexerPos.ReadPos >= input.Length then
+                emptyChar
+            else
+                input.[lexerPos.ReadPos]
+
+        let rec nextTokenRec lexerPos tokens =
+            if lexerPos.CurrentChar = emptyChar then
+                List.rev tokens
+            else 
+                let wsPos = skipWhitespace lexerPos
+                let partialToken = newToken (wsPos.CurrentChar.ToString())
+                let oneCharPosIncrement = incrementPosition wsPos
+                let rec multipleCharPosIncrement number currentPos =
+                    if number > 0 then
+                        multipleCharPosIncrement (number - 1) (incrementPosition currentPos)
+                    else 
+                        currentPos
+
+                let newLexerPos, token =
+                    match wsPos.CurrentChar with
+                    | '=' -> 
+                        if peekChar wsPos = '=' then
+                            (multipleCharPosIncrement 2 wsPos, newToken "==" EQ)
+                        else
+                            (oneCharPosIncrement, partialToken ASSIGN)
+                    | ';' -> (oneCharPosIncrement, partialToken SEMICOLON)
+                    | '(' -> (oneCharPosIncrement, partialToken LPAREN)
+                    | ')' -> (oneCharPosIncrement, partialToken RPAREN)
+                    | ',' -> (oneCharPosIncrement, partialToken COMMA)
+                    | '+' -> (oneCharPosIncrement, partialToken PLUS)
+                    | '{' -> (oneCharPosIncrement, partialToken LBRACE)
+                    | '}' -> (oneCharPosIncrement, partialToken RBRACE)
+                    | '-' -> (oneCharPosIncrement, partialToken MINUS)
+                    | '!' -> 
+                        if peekChar wsPos = '=' then
+                            (multipleCharPosIncrement 2 wsPos, newToken "!=" NOT_EQ)
+                        else
+                            (oneCharPosIncrement, partialToken BANG)
+                    | '/' -> (oneCharPosIncrement, partialToken SLASH)
+                    | '*' -> (oneCharPosIncrement, partialToken ASTERISK)
+                    | '>' -> (oneCharPosIncrement, partialToken GT)
+                    | '<' -> (oneCharPosIncrement, partialToken LT)
+                    | _ -> 
+                        if isLetter wsPos.CurrentChar then
+                            let newPos, identifier = readIdentifier wsPos
+                            let tokenType = lookupIdent identifier
+                            let identiferToken = newToken identifier tokenType
+                            (newPos, identiferToken)
+                        else if isNumber wsPos.CurrentChar then
+                            let newPos, numberValue = readNumber wsPos
+                            let numberToken = newToken numberValue INT
+                            (newPos, numberToken)
+                        else if wsPos.CurrentChar = emptyChar then
+                            (oneCharPosIncrement, partialToken EOF)
+                        else
+                            (oneCharPosIncrement, partialToken ILLEGAL)
+                nextTokenRec newLexerPos (token::tokens)
+                
+        let initialLexerPosition = { Pos = 0; ReadPos = 1; CurrentChar = input.[0] }
+        nextTokenRec initialLexerPosition []
+
+

@@ -2,7 +2,7 @@
 
 open NUnit.Framework
 open Monkey.Parser
-open Monkey.Lexer2
+open Monkey.Lexer
 open Monkey.Ast
 
 module Parser_Tests =

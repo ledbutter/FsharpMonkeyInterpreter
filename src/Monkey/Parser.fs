@@ -66,6 +66,9 @@ module Parser =
                 (prefixExpression, newRemaining)
 
             let parseInfixExpression left currentToken remainingTokens parseNext =
+                printfn "Parsing infix with currentToken %A and remaining tokens %A" currentToken remainingTokens
+
+
                 let precedence = getPrecedence currentToken
                 let (right, newRemaining) = parseNext precedence (List.head remainingTokens) (List.tail remainingTokens)
                 let infixExpression = {InfixExpression.Left = left; Token = currentToken; Operator = currentToken.Literal; Right = right} :> Expression
@@ -81,10 +84,15 @@ module Parser =
                     raise (ParseError errorMessage)
 
             let parseGroupedExpression _ remainingTokens parseNext =
+                printfn "Attempting to parse grouped expression with head %A" (List.head remainingTokens)
+
                 let (expression, newRemaining) = parseNext OperatorPrecedence.Lowest (List.head remainingTokens) (List.tail remainingTokens)
+
+                printfn "Parsed group expression, new remaining %A" newRemaining
+
                 let peekResult = expectPeek (List.head newRemaining) RPAREN
                 match peekResult with
-                | [] -> (expression, newRemaining)
+                | [] -> (expression, (List.tail newRemaining))
                 | errors -> raise (ParseError (List.head errors))
 
             // todo: there has to be a more elegant way of doing this:
@@ -138,33 +146,31 @@ module Parser =
                     let reachedEndCondition token =
                         token.Type = SEMICOLON || (token |> getPrecedence <= precedence)
 
-                    let rec applyInfix token remainingTokens' currentInfix =
+                    let rec applyInfix remainingTokens' currentInfix =
+                        let token = (List.head remainingTokens')
                         if token |> reachedEndCondition then
-                            (currentInfix, [])
+                            (currentInfix, remainingTokens') 
                         else
                             let found, infixFunction = infixParseFunctionMap.TryGetValue token.Type
 
                             if found then
-                                let newCurrentInfix, newCurrentRemaining = infixFunction currentInfix token remainingTokens' parseExpression
+                                let newCurrentInfix, newCurrentRemaining = infixFunction currentInfix (List.head remainingTokens') (List.tail remainingTokens') parseExpression
                                 match newCurrentRemaining with
                                 | [] -> (newCurrentInfix, [])
-                                | x::xs -> applyInfix x xs newCurrentInfix
+                                | _ -> applyInfix newCurrentRemaining newCurrentInfix
                             else
-                                (currentInfix, [])
+                                (currentInfix, remainingTokens')
 
                     let found, prefixFunction = prefixParseFunctionMap.TryGetValue currentToken.Type
                     if found then
                         let left, remaining = prefixFunction currentToken remainingTokens parseExpression
                         match remaining with
                         | [] -> 
-                            //printfn "None remaining in parseExpression with left %A" left
                             (left, [])
                         | x::_ when x |> reachedEndCondition -> 
-                            //printfn "Reached end condition in parseExpression with left %A, head %A and precedence %A" left x precedence
                             (left, remaining)
-                        | x::xs ->
-                            //printfn "Calling applyInfix with left %A and remaining %A" left remaining
-                            applyInfix x xs left
+                        | _ ->
+                            applyInfix remaining left
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))
 
@@ -175,8 +181,8 @@ module Parser =
                         []
                     | x::_ when x.Type = SEMICOLON -> 
                         (List.tail updatedRemainingTokens)
-                    | (tokens) ->
-                        tokens
+                    | _ ->
+                        updatedRemainingTokens
                 let expressionStatement = {ExpressionStatement.Token = currentToken; Expression = expression} :> Statement
                 (expressionStatement, nextRemainingTokens, [])
 

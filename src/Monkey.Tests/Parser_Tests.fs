@@ -155,12 +155,12 @@ module Parser_Tests =
             let booleanExpression = expressionStatement.Expression :?> Boolean
             Assert.AreEqual(expectedResult, booleanExpression.Value)
 
-    //[<TestCase("-a * b", "((-a) * b)")>]
-    //[<TestCase("!-a", "(!(-a))")>]
-    //[<TestCase("a + b + c", "((a + b) + c)")>]
+    [<TestCase("-a * b", "((-a) * b)")>]
+    [<TestCase("!-a", "(!(-a))")>]
+    [<TestCase("a + b + c", "((a + b) + c)")>]
     [<TestCase("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)")>]
-    //[<TestCase("1 + ( 2 + 3) + 4", "((1 + (2 + 3)) + 4)")>]
-    //[<TestCase("(5 + 5) * 2", "((5 + 5) * 2)")>]
+    [<TestCase("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)")>]
+    [<TestCase("(5 + 5) * 2", "((5 + 5) * 2)")>]
     let testOperatorPrecedenceParsing input expectedResult =
         let parserResults = input |> generateResults
         match parserResults with

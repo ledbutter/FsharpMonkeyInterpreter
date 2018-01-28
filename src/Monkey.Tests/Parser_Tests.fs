@@ -6,7 +6,6 @@ open Monkey.Lexer
 open Monkey.Ast
 
 module Parser_Tests =
-
     let testLetStatement (statement:Statement) (expectedName:string) =
         Assert.AreEqual("let", statement.TokenLiteral())
         let letStatement = statement :?> LetStatement
@@ -228,3 +227,26 @@ module Parser_Tests =
             Assert.AreEqual(1, functionLiteral.Body.Statements.Length)
             let bodyStatement = functionLiteral.Body.Statements.[0] :?> ExpressionStatement
             assertInfixExpression bodyStatement.Expression "x" "+" "y"
+
+    [<Test>]
+    let testFunctionParameterParsing() =
+        // can't do arrays as actual TestCase members apparently
+        let testCases = [
+            "fn() {};", []
+            "fn(x) {};", ["x"]
+            "fn(x, y, z) {};", ["x"; "y"; "z"]
+        ]
+
+        for i in 0..testCases.Length-1 do
+            let input, expectedParams = testCases.[i]
+            let parserResults = input |> generateResults
+            match parserResults with
+            | Errors e ->
+                e |> assertErrors
+            | Program p ->
+                Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+                let statement = p.Statements.[0] :?> ExpressionStatement
+                let functionLiteral = statement.Expression :?> FunctionLiteral
+                Assert.AreEqual(expectedParams.Length, functionLiteral.Parameters.Length, "param count off")
+                for p in 0..expectedParams.Length-1 do
+                    Assert.AreEqual(expectedParams.[p], functionLiteral.Parameters.[p].TokenLiteral())

@@ -169,6 +169,12 @@ module Parser_Tests =
         | Program p ->
             Assert.AreEqual(expectedResult, p.ToString())
 
+    let assertInfixExpression (expression:Expression) expectedLeftValue expectedOperator expectedRightValue =
+        let infixExpression = expression :?> InfixExpression
+        Assert.AreEqual(expectedLeftValue, infixExpression.Left.TokenLiteral(), "left")
+        Assert.AreEqual(expectedOperator, infixExpression.Operator, "operator")
+        Assert.AreEqual(expectedRightValue, infixExpression.Right.TokenLiteral(), "right")
+
     [<Test>]
     let testIfExpression() =
         let input = "if (x < y) { x }"
@@ -180,10 +186,7 @@ module Parser_Tests =
             Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
             let expressionStatement = p.Statements.Item(0) :?> ExpressionStatement
             let ifExpression = expressionStatement.Expression :?> IfExpression
-            let conditionInfixExpression = ifExpression.Condition :?> InfixExpression
-            Assert.AreEqual("x", conditionInfixExpression.Left.TokenLiteral())
-            Assert.AreEqual("<", conditionInfixExpression.Operator)
-            Assert.AreEqual("y", conditionInfixExpression.Right.TokenLiteral())
+            assertInfixExpression ifExpression.Condition "x" "<" "y"
             Assert.AreEqual(1, ifExpression.Consequence.Statements.Length)
             let consequence = ifExpression.Consequence.Statements.Item(0) :?> ExpressionStatement
             Assert.AreEqual("x", consequence.TokenLiteral())
@@ -200,11 +203,28 @@ module Parser_Tests =
             Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
             let expressionStatement = p.Statements.Item(0) :?> ExpressionStatement
             let ifExpression = expressionStatement.Expression :?> IfExpression
-            let conditionInfixExpression = ifExpression.Condition :?> InfixExpression
-            Assert.AreEqual("x", conditionInfixExpression.Left.TokenLiteral())
-            Assert.AreEqual("<", conditionInfixExpression.Operator)
-            Assert.AreEqual("y", conditionInfixExpression.Right.TokenLiteral())
+            assertInfixExpression ifExpression.Condition "x" "<" "y"
             Assert.AreEqual(1, ifExpression.Consequence.Statements.Length)
             let consequence = ifExpression.Consequence.Statements.Item(0) :?> ExpressionStatement
             Assert.AreEqual("x", consequence.TokenLiteral())
             Assert.AreEqual(1, ifExpression.Alternative.Statements.Length)
+
+    [<Test>]
+    let testFunctionLiteralParsing() =
+        let input = "fn(x, y) { x + y; }"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let expressionStatement = p.Statements.Item(0) :?> ExpressionStatement
+            let functionLiteral = expressionStatement.Expression :?> FunctionLiteral
+            Assert.AreEqual(2, functionLiteral.Parameters.Length, "parameter length")
+            let parameterOne = functionLiteral.Parameters.[0]
+            Assert.AreEqual("x", parameterOne.TokenLiteral())
+            let parameterTwo = functionLiteral.Parameters.[1]
+            Assert.AreEqual("y", parameterTwo.TokenLiteral())
+            Assert.AreEqual(1, functionLiteral.Body.Statements.Length)
+            let bodyStatement = functionLiteral.Body.Statements.[0] :?> ExpressionStatement
+            assertInfixExpression bodyStatement.Expression "x" "+" "y"

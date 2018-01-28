@@ -88,7 +88,6 @@ module Parser =
                 | errors -> raise (ParseError (List.head errors))
 
             let parseBlockStatement currentToken remainingTokens =
-                // keep going until rbrace or EOF
                 let reachedEndCondition token =
                     token.Type = RBRACE || token.Type = EOF
                 
@@ -124,8 +123,37 @@ module Parser =
                         | _ ->
                             let ifExpression = {IfExpression.Token = currentToken; Condition = condition; Consequence = consequence; Alternative = emptyAlternative}
                             (ifExpression :> Expression, [])
-                        //let consequence = 
                     | errors -> raise (ParseError (List.head errors))
+                | errors -> raise (ParseError (List.head errors))
+
+            let parseFunctionParameters remainingTokens =
+                let identifierToken = (List.head remainingTokens)
+                if identifierToken.Type = RPAREN then
+                    ([], (List.tail remainingTokens))
+                else
+                    let identifier = {Identifier.Token = identifierToken; Value = identifierToken.Literal}
+                    let rec parseFunctionParametersRec remainingTokens' identifiers =
+                        match (List.head remainingTokens').Type with
+                        | COMMA -> 
+                            let nextIdentifierToken = remainingTokens'.[1]
+                            let nextIdentifier = {Identifier.Token = nextIdentifierToken; Value = nextIdentifierToken.Literal}
+                            parseFunctionParametersRec remainingTokens'.[2..] (nextIdentifier::identifiers)
+                        | _ ->
+                            ((List.rev identifiers), (List.tail remainingTokens'))
+                    parseFunctionParametersRec remainingTokens.[1..] [identifier]
+
+            let parseFunctionLiteral currentToken remainingTokens _ =
+                let peekResult = expectPeek (List.head remainingTokens) LPAREN
+                match peekResult with
+                | [] ->
+                    let (parameters, remainingTokens') = parseFunctionParameters (List.tail remainingTokens)
+                    match remainingTokens' with
+                    | [] -> raise (ParseError("No tokens for function body!"))
+                    | x::_ when x.Type <> LBRACE -> raise (ParseError("Found token other then left brace for function body!"))
+                    | _::xs ->
+                        let (body, finalRemaining) = parseBlockStatement (List.head xs) (List.tail xs)
+                        let functionLiteral = {FunctionLiteral.Parameters = parameters; Token = currentToken; Body = body} :> Expression
+                        (functionLiteral, finalRemaining)
                 | errors -> raise (ParseError (List.head errors))
 
 
@@ -138,7 +166,8 @@ module Parser =
                                                 TRUE, parseBoolean;
                                                 FALSE, parseBoolean;
                                                 LPAREN, parseGroupedExpression;
-                                                IF, parseIfExpression;]
+                                                IF, parseIfExpression;
+                                                FUNCTION, parseFunctionLiteral;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

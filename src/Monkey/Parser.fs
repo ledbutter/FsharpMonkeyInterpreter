@@ -41,6 +41,12 @@ module Parser =
                 else
                     [sprintf "Expected next token to be %s, got %s instead" tokenType token.Type]
 
+            let combineStrings strings =
+                strings
+                |> Seq.fold(fun (sb:System.Text.StringBuilder) s ->
+                    sb.AppendLine(s)) (new System.Text.StringBuilder())
+                |> fun x -> x.ToString()
+
             let rec iterateUntil (iterableTokens: Token list) (tokenType:string) =
                 if iterableTokens.Head.Type = tokenType then
                     iterableTokens                    
@@ -85,7 +91,9 @@ module Parser =
                 let peekResult = expectPeek (List.head newRemaining) RPAREN
                 match peekResult with
                 | [] -> (expression, (List.tail newRemaining))
-                | errors -> raise (ParseError (List.head errors))
+                | errors -> 
+                    let errorMessage = combineStrings errors
+                    raise (ParseError(errorMessage))
 
             let parseBlockStatement currentToken remainingTokens =
                 let reachedEndCondition token =
@@ -123,8 +131,12 @@ module Parser =
                         | _ ->
                             let ifExpression = {IfExpression.Token = currentToken; Condition = condition; Consequence = consequence; Alternative = emptyAlternative}
                             (ifExpression :> Expression, [])
-                    | errors -> raise (ParseError (List.head errors))
-                | errors -> raise (ParseError (List.head errors))
+                    | errors -> 
+                        let errorMessage = combineStrings errors
+                        raise (ParseError(errorMessage))
+                | errors -> 
+                    let errorMessage = combineStrings errors
+                    raise (ParseError(errorMessage))
 
             let parseFunctionParameters remainingTokens =
                 let identifierToken = (List.head remainingTokens)
@@ -154,8 +166,9 @@ module Parser =
                         let (body, finalRemaining) = parseBlockStatement (List.head xs) (List.tail xs)
                         let functionLiteral = {FunctionLiteral.Parameters = parameters; Token = currentToken; Body = body} :> Expression
                         (functionLiteral, finalRemaining)
-                | errors -> raise (ParseError (List.head errors))
-
+                | errors -> 
+                    let errorMessage = combineStrings errors
+                    raise (ParseError(errorMessage))
 
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
@@ -180,11 +193,11 @@ module Parser =
 
             match currentToken.Type with
             | LET -> 
-                let parserErrors = List.append (expectPeek remainingTokens.Head IDENT) (expectPeek remainingTokens.[1] ASSIGN)
+                let identifierToken = (List.head remainingTokens)
+                let parserErrors = List.append (expectPeek identifierToken IDENT) (expectPeek remainingTokens.[1] ASSIGN)
 
                 match parserErrors with
                 | [] ->
-                    let identifierToken = remainingTokens.Head
                     let nextRemainingTokens = iterateUntil remainingTokens.[2..] SEMICOLON
                     let name = {Identifier.Token = identifierToken; Value = identifierToken.Literal}
                     // todo: create an actual expression
@@ -192,7 +205,7 @@ module Parser =
                     // notice we are downcasting to statement here!!!
                     let letStatement = {Token = currentToken; Name = name; Value = value} :> Statement
                     // skip over the semicolon by just taking the tail
-                    (letStatement, nextRemainingTokens.Tail, [])
+                    (letStatement, (List.tail nextRemainingTokens), [])
                 | errors ->
                     (EmptyStatement() :> Statement, remainingTokens, errors)
 

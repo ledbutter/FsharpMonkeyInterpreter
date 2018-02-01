@@ -23,7 +23,8 @@ module Parser =
                                 PLUS, OperatorPrecedence.Sum;
                                 MINUS, OperatorPrecedence.Sum;
                                 SLASH, OperatorPrecedence.Product;
-                                ASTERISK, OperatorPrecedence.Product;]
+                                ASTERISK, OperatorPrecedence.Product;
+                                LPAREN, OperatorPrecedence.Call]
 
         let getPrecedence token =
             let found, p = precedences.TryGetValue token.Type
@@ -145,11 +146,11 @@ module Parser =
                 else
                     let identifier = {Identifier.Token = identifierToken; Value = identifierToken.Literal}
                     let rec parseFunctionParametersRec remainingTokens' identifiers =
-                        match (List.head remainingTokens').Type with
-                        | COMMA -> 
-                            let nextIdentifierToken = remainingTokens'.[1]
+                        match remainingTokens' with
+                        | x::xs when x.Type = COMMA -> 
+                            let nextIdentifierToken = (List.head xs)
                             let nextIdentifier = {Identifier.Token = nextIdentifierToken; Value = nextIdentifierToken.Literal}
-                            parseFunctionParametersRec remainingTokens'.[2..] (nextIdentifier::identifiers)
+                            parseFunctionParametersRec (List.tail xs) (nextIdentifier::identifiers)
                         | _ ->
                             ((List.rev identifiers), (List.tail remainingTokens'))
                     parseFunctionParametersRec remainingTokens.[1..] [identifier]
@@ -170,6 +171,30 @@ module Parser =
                     let errorMessage = combineStrings errors
                     raise (ParseError(errorMessage))
 
+            let parseCallArguments remainingTokens parseNext =
+                match remainingTokens with
+                | [] -> ([], [])
+                | x::xs when x.Type = RPAREN -> ([], xs)
+                | x::xs ->
+                    let rec parseCallArgumentsRec remainingTokens' arguments =
+                        match remainingTokens' with
+                        | x::xs when x.Type = COMMA ->
+                            let (nextArgument, newRemaining) = parseNext OperatorPrecedence.Lowest (List.head xs) (List.tail xs)
+                            parseCallArgumentsRec newRemaining (nextArgument::arguments)
+                        | _::_ ->
+                            // should be a ), so let's skip it
+                            (List.rev arguments, (List.tail remainingTokens'))
+                        | [] ->
+                            (List.rev arguments, [])
+
+                    let (firstArgument, remainingAfterFirst) = parseNext OperatorPrecedence.Lowest x xs
+                    parseCallArgumentsRec remainingAfterFirst [firstArgument]
+
+            let parseCallExpression left currentToken remainingTokens parseNext =
+                let (arguments, newRemaining) = parseCallArguments remainingTokens parseNext
+                let callExpression = {CallExpression.Token = currentToken; Function = left; Arguments = arguments} :> Expression
+                (callExpression, newRemaining)
+            
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
@@ -189,7 +214,8 @@ module Parser =
                                                 EQ, parseInfixExpression;
                                                 NOT_EQ, parseInfixExpression;
                                                 LT, parseInfixExpression;
-                                                GT, parseInfixExpression;]
+                                                GT, parseInfixExpression;
+                                                LPAREN, parseCallExpression;]
 
             match currentToken.Type with
             | LET -> 
@@ -220,14 +246,12 @@ module Parser =
 
                 // this parseExpression algorithm is an example of Pratt parsing
                 let rec parseExpression precedence currentToken remainingTokens =
-                    let reachedEndCondition token =
-                        token.Type = SEMICOLON || (token |> getPrecedence <= precedence)
+                    let canContinue token =
+                        token.Type <> SEMICOLON && (token |> getPrecedence > precedence)
 
                     let rec applyInfix remainingTokens' currentInfix =
                         let token = (List.head remainingTokens')
-                        if token |> reachedEndCondition then
-                            (currentInfix, remainingTokens') 
-                        else
+                        if token |> canContinue then
                             let found, infixFunction = infixParseFunctionMap.TryGetValue token.Type
 
                             if found then
@@ -237,6 +261,8 @@ module Parser =
                                 | _ -> applyInfix newCurrentRemaining newCurrentInfix
                             else
                                 (currentInfix, remainingTokens')
+                        else
+                            (currentInfix, remainingTokens') 
 
                     let found, prefixFunction = prefixParseFunctionMap.TryGetValue currentToken.Type
                     if found then
@@ -244,10 +270,11 @@ module Parser =
                         match remaining with
                         | [] -> 
                             (left, [])
-                        | x::_ when x |> reachedEndCondition -> 
-                            (left, remaining)
-                        | _ ->
+                        | x::_ when x |> canContinue -> 
                             applyInfix remaining left
+                        | _ ->
+                            (left, remaining)
+                            
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))
 

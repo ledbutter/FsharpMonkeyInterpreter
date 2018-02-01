@@ -184,6 +184,24 @@ module Ast =
 
             sprintf "%s (%s) %s" (x.TokenLiteral()) parameterValues (x.Body.ToString())
 
+    type CallExpression =
+        {
+            Token: Token
+            Function: Expression
+            Arguments: Expression list
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            let argumentValues = 
+                x.Arguments
+                |> Seq.map(fun s -> s.ToString())
+                |> fun x -> x |> String.concat ", "
+
+            sprintf "%s (%s)" (x.Function.ToString()) argumentValues
+
     // dummy types
 
     type EmptyExpression =

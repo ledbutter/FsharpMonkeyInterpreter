@@ -6,7 +6,7 @@ open Monkey.Lexer
 open Monkey.Ast
 
 module Parser_Tests =
-    let testLetStatement (statement:Statement) (expectedName:string) =
+    let assertLetStatement (statement:Statement) (expectedName:string) =
         Assert.AreEqual("let", statement.TokenLiteral())
         let letStatement = statement :?> LetStatement
         Assert.AreEqual(expectedName, letStatement.Name.Value, "name value")
@@ -18,11 +18,11 @@ module Parser_Tests =
             sprintf "Parser error: %s" error |> ignore
         Assert.Fail("Parsing failed")
 
-    let testReturnStatement (statement:Statement) expectedReturnValue =
+    let assertReturnStatement (statement:Statement) expectedReturnValue =
         let returnStatement = statement :?> ReturnStatement
         Assert.AreEqual("return", returnStatement.TokenLiteral())
 
-    let testIntegerLiteral (intLiteral:IntegerLiteral) (expectedValue:int64) =
+    let assertIntegerLiteral (intLiteral:IntegerLiteral) (expectedValue:int64) =
         Assert.AreEqual(expectedValue, intLiteral.Value)
         Assert.AreEqual(expectedValue.ToString(), intLiteral.TokenLiteral())
 
@@ -51,7 +51,7 @@ module Parser_Tests =
 
             for i in 0..expectedResults.Length-1 do
                 let statement = p.Statements.[i]
-                testLetStatement statement (expectedResults.[i])
+                assertLetStatement statement (expectedResults.[i])
 
     [<Test>]
     let testReturnStatements() =
@@ -74,7 +74,7 @@ module Parser_Tests =
 
             for i in 0..expectedReturnValues.Length-1 do
                 let statement = p.Statements.[i]
-                testReturnStatement statement (expectedReturnValues.[i])
+                assertReturnStatement statement (expectedReturnValues.[i])
 
     [<Test>]
     let testIdentifierExpression() =
@@ -101,7 +101,7 @@ module Parser_Tests =
             Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
             let expressionStatement = p.Statements.[0] :?> ExpressionStatement
             let literal = expressionStatement.Expression :?> IntegerLiteral
-            testIntegerLiteral literal 5L |> ignore
+            assertIntegerLiteral literal 5L |> ignore
 
     [<TestCase("!5", "!", 5)>]
     [<TestCase("-15", "-", 15)>]
@@ -116,7 +116,7 @@ module Parser_Tests =
             let prefixExpression = expressionStatement.Expression :?> PrefixExpression
             Assert.AreEqual(operator, prefixExpression.Operator)
             let integerLiteral = prefixExpression.Right :?> IntegerLiteral
-            testIntegerLiteral integerLiteral integerValue |> ignore
+            assertIntegerLiteral integerLiteral integerValue |> ignore
 
     [<TestCase("5 + 5;", 5, "+", 5)>]
     [<TestCase("5 - 5;", 5, "-", 5)>]
@@ -136,9 +136,9 @@ module Parser_Tests =
             let expressionStatement = p.Statements.[0] :?> ExpressionStatement
             let infixExpression = expressionStatement.Expression :?> InfixExpression
             let leftValue = infixExpression.Left :?> IntegerLiteral
-            testIntegerLiteral leftValue expectedLeftValue |> ignore
+            assertIntegerLiteral leftValue expectedLeftValue |> ignore
             let rightValue = infixExpression.Right :?> IntegerLiteral
-            testIntegerLiteral rightValue expectedRightValue |> ignore
+            assertIntegerLiteral rightValue expectedRightValue |> ignore
             Assert.AreEqual(expectedOperator, infixExpression.Operator)
 
     [<TestCase("true", true)>]
@@ -250,3 +250,20 @@ module Parser_Tests =
                 Assert.AreEqual(expectedParams.Length, functionLiteral.Parameters.Length, "param count off")
                 for p in 0..expectedParams.Length-1 do
                     Assert.AreEqual(expectedParams.[p], functionLiteral.Parameters.[p].TokenLiteral())
+
+    [<Test>]
+    let testCallExpressionParsing() =
+        let input = "add(1, 2 * 3, 4 + 5);"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let callExpression = statement.Expression :?> CallExpression
+            Assert.AreEqual("add", callExpression.Function.TokenLiteral())
+            Assert.AreEqual(3, callExpression.Arguments.Length)
+            assertIntegerLiteral (callExpression.Arguments.[0] :?> IntegerLiteral) 1L
+            assertInfixExpression callExpression.Arguments.[1] "2" "*" "3"
+            assertInfixExpression callExpression.Arguments.[2] "4" "+" "5"

@@ -21,6 +21,7 @@ module Parser_Tests =
     let assertReturnStatement (statement:Statement) expectedReturnValue =
         let returnStatement = statement :?> ReturnStatement
         Assert.AreEqual("return", returnStatement.TokenLiteral())
+        Assert.AreEqual(expectedReturnValue, returnStatement.ReturnValue.TokenLiteral())
 
     let assertIntegerLiteral (intLiteral:IntegerLiteral) (expectedValue:int64) =
         Assert.AreEqual(expectedValue, intLiteral.Value)
@@ -160,6 +161,7 @@ module Parser_Tests =
     [<TestCase("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)")>]
     [<TestCase("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)")>]
     [<TestCase("(5 + 5) * 2", "((5 + 5) * 2)")>]
+    [<TestCase("a + add(b * c) + d", "((a + add((b * c))) + d)")>]
     let testOperatorPrecedenceParsing input expectedResult =
         let parserResults = input |> generateResults
         match parserResults with

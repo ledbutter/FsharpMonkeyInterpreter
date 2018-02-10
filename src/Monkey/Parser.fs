@@ -217,35 +217,8 @@ module Parser =
                                                 GT, parseInfixExpression;
                                                 LPAREN, parseCallExpression;]
 
-            match currentToken.Type with
-            | LET -> 
-                let identifierToken = (List.head remainingTokens)
-                let parserErrors = List.append (expectPeek identifierToken IDENT) (expectPeek remainingTokens.[1] ASSIGN)
-
-                match parserErrors with
-                | [] ->
-                    let nextRemainingTokens = iterateUntil remainingTokens.[2..] SEMICOLON
-                    let name = {Identifier.Token = identifierToken; Value = identifierToken.Literal}
-                    // todo: create an actual expression
-                    let value = EmptyExpression()
-                    // notice we are downcasting to statement here!!!
-                    let letStatement = {Token = currentToken; Name = name; Value = value} :> Statement
-                    // skip over the semicolon by just taking the tail
-                    (letStatement, (List.tail nextRemainingTokens), [])
-                | errors ->
-                    (EmptyStatement() :> Statement, remainingTokens, errors)
-
-            | RETURN ->
-                let nextRemainingTokens = iterateUntil remainingTokens.[1..] SEMICOLON
-                // todo: create an actual expression
-                let value = EmptyExpression()
-                let returnStatement = {Token = currentToken; ReturnValue = value} :> Statement
-                (returnStatement, nextRemainingTokens.Tail, [])
-            | _ ->
-                // everything else is considered an expression statement
-
-                // this parseExpression algorithm is an example of Pratt parsing
-                let rec parseExpression precedence currentToken remainingTokens =
+            // this parseExpression algorithm is an example of Pratt parsing
+            let rec parseExpression precedence currentToken remainingTokens =
                     let canContinue token =
                         token.Type <> SEMICOLON && (token |> getPrecedence > precedence)
 
@@ -278,6 +251,34 @@ module Parser =
                     else
                         raise (ParseError (sprintf "Unable to find prefix parser function for token type %s" currentToken.Type))
 
+            match currentToken.Type with
+            | LET -> 
+                let identifierToken = (List.head remainingTokens)
+                let parserErrors = List.append (expectPeek identifierToken IDENT) (expectPeek remainingTokens.[1] ASSIGN)
+
+                match parserErrors with
+                | [] ->
+                    let name = {Identifier.Token = identifierToken; Value = identifierToken.Literal}
+                    let (value, nextRemainingTokens) = parseExpression OperatorPrecedence.Lowest remainingTokens.[2] remainingTokens.[3..]
+                    let letStatement = {Token = currentToken; Name = name; Value = value} :> Statement
+                    let nextRemainingTokens' =
+                        match nextRemainingTokens with
+                        | x::xs when x.Type = SEMICOLON -> xs
+                        | _ -> nextRemainingTokens
+                    (letStatement, nextRemainingTokens', [])
+                | errors ->
+                    (EmptyStatement() :> Statement, remainingTokens, errors)
+
+            | RETURN ->
+                let (value, nextRemainingTokens) = parseExpression OperatorPrecedence.Lowest (List.head remainingTokens) (List.tail remainingTokens)
+                let returnStatement = {Token = currentToken; ReturnValue = value} :> Statement
+                let nextRemainingTokens' =
+                        match nextRemainingTokens with
+                        | x::xs when x.Type = SEMICOLON -> xs
+                        | _ -> nextRemainingTokens
+                (returnStatement, nextRemainingTokens', [])
+            | _ ->
+                // everything else is considered an expression statement
                 let (expression, updatedRemainingTokens) = parseExpression OperatorPrecedence.Lowest currentToken remainingTokens
                 let nextRemainingTokens =
                     match updatedRemainingTokens with

@@ -200,7 +200,7 @@ module Ast =
                 |> Seq.map(fun s -> s.ToString())
                 |> fun x -> x |> String.concat ", "
 
-            sprintf "%s (%s)" (x.Function.ToString()) argumentValues
+            sprintf "%s(%s)" (x.Function.ToString()) argumentValues
 
     // dummy types
 

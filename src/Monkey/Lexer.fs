@@ -121,5 +121,3 @@ module Lexer =
                 
         let initialLexerPosition = { Pos = 0; ReadPos = 1; CurrentChar = input.[0] }
         nextTokenRec initialLexerPosition []
-
-

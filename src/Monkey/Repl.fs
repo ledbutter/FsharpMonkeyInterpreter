@@ -3,6 +3,7 @@
 open System
 open System.IO
 open Lexer
+open Parser
 
 module Repl =
 
@@ -16,10 +17,16 @@ module Repl =
         // todo: async!
         Console.Write(PROMPT) |> ignore
         //output.Print ">> " <-- this results in a newline, can I do printfn without a newline?
-        let scanned = reader.ReadLine()
-        let tokens = tokenizeInput scanned
-        for i in 0..tokens.Length-1 do
-            output.Print "%A" tokens.[i]
+
+        let parserOutput = reader.ReadLine() |> tokenizeInput |> parseProgram
+
+        match parserOutput with
+        | Errors e -> 
+            for i in 0..e.Length-1 do
+                output.Print "%A" e.[i]
+        | Program p ->
+            output.Print "%A" (p.ToString())
+
         start reader output    
     
         

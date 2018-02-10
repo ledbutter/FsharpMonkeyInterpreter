@@ -35,6 +35,7 @@ module Parser =
 
         let rec parseStatement currentToken (remainingTokens: Token list) =
 
+            //todo: switch the exceptions to string error messages
             //todo: convert this to a Some/None construct
             let expectPeek token tokenType =
                 if token.Type = tokenType then

@@ -181,8 +181,8 @@ module Parser =
                 | [] ->
                     let (parameters, remainingTokens') = parseFunctionParameters (List.tail remainingTokens)
                     match remainingTokens' with
-                    | [] -> raise (ParseError("No tokens for function body!"))
-                    | x::_ when x.Type <> LBRACE -> raise (ParseError("Found token other then left brace for function body!"))
+                    | [] -> ExpressionErrors(["No tokens for function body!"])
+                    | x::_ when x.Type <> LBRACE -> ExpressionErrors(["Found token other then left brace for function body!"])
                     | _::xs ->
                         let (body, finalRemaining, errors) = parseBlockStatement (List.head xs) (List.tail xs)
                         match errors with

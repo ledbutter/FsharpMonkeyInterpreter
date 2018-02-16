@@ -58,7 +58,6 @@ module Ast =
                 this.Token.Literal
         member this.TokenLiteral() = (this :> Statement).TokenLiteral()
         override x.ToString() =
-            let sb = new System.Text.StringBuilder()
             sprintf "%s %s = %s;" (x.TokenLiteral()) (x.Name.ToString()) (x.Value.ToString())
 
     type ReturnStatement =
@@ -203,17 +202,10 @@ module Ast =
             sprintf "%s(%s)" (x.Function.ToString()) argumentValues
 
     // dummy types
-
-    type EmptyExpression =
-        interface Expression with
-            member this.TokenLiteral() =
-                ""
-        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
-        new() = {}
-
+    // todo: figure out a way to get rid of this
     type EmptyStatement = 
         interface Statement with
-            member this.TokenLiteral() =
+            member __.TokenLiteral() =
                 ""
         member this.TokenLiteral() = (this :> Statement).TokenLiteral()
         new() = {}

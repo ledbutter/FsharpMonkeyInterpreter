@@ -5,7 +5,7 @@ open Object
 
 module Evaluator =
 
-    let rec eval (node:Node) =
+    let rec eval (node:Node) : Object =
         match node with
         | :? Program as p ->
             let rec evalStatements (unevaluatedStatements : Statement List) (results : Object List) =
@@ -20,4 +20,6 @@ module Evaluator =
             es.Expression |> eval
         | :? IntegerLiteral as il ->
             {Object.Value = il.Value} :> Object
+        | :? Ast.Boolean as bl ->
+            {Object.Boolean.Value = bl.Value} :> Object
         | _ -> Null() :> Object

@@ -33,3 +33,18 @@ module Evaluator_Tests =
             assertIntegerObject evaluated expected
         | Errors e ->
             e |> assertErrors
+
+    let assertBooleanObject (object:Object) expected =
+        let booleanObject = object :?> Boolean
+        Assert.AreEqual(expected, booleanObject.Value)
+
+    [<TestCase("true", true)>]
+    [<TestCase("false", false)>]
+    let testEvalBooleanExpression input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> eval
+            assertBooleanObject evaluated expected
+        | Errors e ->
+            e |> assertErrors

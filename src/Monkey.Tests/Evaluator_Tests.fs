@@ -25,6 +25,8 @@ module Evaluator_Tests =
 
     [<TestCase("5", 5)>]
     [<TestCase("10", 10)>]
+    [<TestCase("-5", -5)>]
+    [<TestCase("-10", -10)>]
     let testEvalIntegerExpression input (expected:int64) =
         let programResult = generateProgram input
         match programResult with
@@ -41,6 +43,21 @@ module Evaluator_Tests =
     [<TestCase("true", true)>]
     [<TestCase("false", false)>]
     let testEvalBooleanExpression input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> eval
+            assertBooleanObject evaluated expected
+        | Errors e ->
+            e |> assertErrors
+
+    [<TestCase("!true", false)>]
+    [<TestCase("!false", true)>]
+    [<TestCase("!5", false)>]
+    [<TestCase("!!true", true)>]
+    [<TestCase("!!false", false)>]
+    [<TestCase("!!5", true)>]
+    let testBangOperator input expected =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 

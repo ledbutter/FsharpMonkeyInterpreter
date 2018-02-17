@@ -116,7 +116,14 @@ module Parser =
                         ({BlockStatement.Token = currentToken; Statements = statements}, remaining, errors)
                     else
                         let (nextStatement, remaining', currentErrors) = parseStatement current remaining
-                        parseBlockStatementRec (List.head remaining') (List.tail remaining') (nextStatement::statements) (currentErrors@errors)
+                        let updatedStatements = nextStatement::statements
+                        let updatedErrors = currentErrors@errors
+
+                        match remaining' with
+                        | [] ->
+                            ({BlockStatement.Token = currentToken; Statements = updatedStatements}, [], updatedErrors)
+                        | x::xs ->
+                            parseBlockStatementRec x xs updatedStatements updatedErrors
 
                 parseBlockStatementRec currentToken remainingTokens [] []
 

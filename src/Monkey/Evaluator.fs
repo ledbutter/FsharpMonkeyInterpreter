@@ -17,13 +17,28 @@ module Evaluator =
             else
                 FALSE
 
-        let rec evalStatements (unevaluatedStatements : Statement List) (results : Object List) =
+        let rec evalProgram (unevaluatedStatements : Statement List) (results : Object List) =
             match unevaluatedStatements with
             | [] -> 
                 List.head results
             | x::xs ->
                 let result = eval x
-                evalStatements xs (result::results)
+                match result with
+                | :? ReturnValue as rv ->
+                    rv.Value
+                | _ ->
+                    evalProgram xs (result::results)
+
+        let rec evalBlockStatement (unevaluatedStatements : Statement List) (results : Object List) =
+            match unevaluatedStatements with
+            | [] ->
+                List.head results
+            | x::xs ->
+                let result = eval x
+                if result.Type() = Object.ObjectTypes.RETURN_VALUE_OBJ then
+                    result
+                else
+                    evalBlockStatement xs (result::results)
         
         let isTruthy object =
             if object = NULL then
@@ -37,7 +52,7 @@ module Evaluator =
 
         match node with
         | :? Program as p ->
-            evalStatements p.Statements []
+            evalProgram p.Statements []
         | :? ExpressionStatement as es ->
             es.Expression |> eval
         | :? IntegerLiteral as il ->
@@ -104,7 +119,7 @@ module Evaluator =
                     NULL
             | _ -> NULL
         | :? BlockStatement as bs ->
-            evalStatements bs.Statements []
+            evalBlockStatement bs.Statements []
         | :? IfExpression as ie ->
             let condition = ie.Condition |> eval
             match isTruthy condition with
@@ -118,4 +133,7 @@ module Evaluator =
                     NULL
                 | _ ->
                     ie.Alternative |> eval
+        | :? ReturnStatement as rs ->
+            let value = rs.ReturnValue |> eval
+            {ReturnValue.Value = value} :> Object
         | _ -> NULL

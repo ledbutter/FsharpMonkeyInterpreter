@@ -127,3 +127,22 @@ module Evaluator_Tests =
                 assertNullObject evaluated
         | Errors e ->
             e |> assertErrors
+
+    [<TestCase("return 10;", 10)>]
+    [<TestCase("return 10; 9;", 10)>]
+    [<TestCase("return 2 * 5; 9;", 10)>]
+    [<TestCase("9; return 2 * 5; 9;", 10)>]
+    [<TestCase(@"if (10 > 1) { 
+                    if (10 > 1) { 
+                        return 10; 
+                    } 
+                    return 1; 
+                 }", 10)>]
+    let testReturnStatements input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> eval
+            assertIntegerObject evaluated expected
+        | Errors e ->
+            e |> assertErrors

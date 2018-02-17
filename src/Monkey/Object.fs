@@ -7,6 +7,7 @@ module Object =
         let INTEGER_OBJ = "INTEGER" |> ObjectType
         let BOOLEAN_OBJ = "BOOLEAN" |> ObjectType
         let NULL_OBJ = "NULL" |> ObjectType
+        let RETURN_VALUE_OBJ = "RETURN_VALUE" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -39,3 +40,13 @@ module Object =
             member __.Type() =
                 ObjectTypes.NULL_OBJ
         new() = {}
+
+    type ReturnValue =
+        {
+            Value: Object
+        }
+        interface Object with
+            member this.Inspect() =
+                sprintf "%s" (this.Value.Inspect())
+            member __.Type() =
+                ObjectTypes.RETURN_VALUE_OBJ

@@ -5,11 +5,11 @@ open Object
 
 module Evaluator =
 
-    let rec eval (node:Node) : Object =
+    let TRUE = {Object.Boolean.Value = true} :> Object
+    let FALSE = {Object.Boolean.Value = false} :> Object
+    let NULL = Null() :> Object
 
-        let TRUE = {Object.Boolean.Value = true} :> Object
-        let FALSE = {Object.Boolean.Value = false} :> Object
-        let NULL = Null() :> Object
+    let rec eval (node:Node) : Object =
 
         let boolToBooleanObject boolVal =
             if boolVal then
@@ -17,16 +17,27 @@ module Evaluator =
             else
                 FALSE
 
+        let rec evalStatements (unevaluatedStatements : Statement List) (results : Object List) =
+            match unevaluatedStatements with
+            | [] -> 
+                List.head results
+            | x::xs ->
+                let result = eval x
+                evalStatements xs (result::results)
+        
+        let isTruthy object =
+            if object = NULL then
+                false
+            else if object = TRUE then
+                true
+            else if object = FALSE then
+                false
+            else
+                true
+
         match node with
         | :? Program as p ->
-            let rec evalStatements (unevaluatedStatements : Statement List) (results : Object List) =
-                match unevaluatedStatements with
-                | [] -> 
-                    List.head results
-                | x::xs ->
-                    let result = eval x
-                    evalStatements xs (result::results)
-            evalStatements (p.Statements) []
+            evalStatements p.Statements []
         | :? ExpressionStatement as es ->
             es.Expression |> eval
         | :? IntegerLiteral as il ->
@@ -92,4 +103,19 @@ module Evaluator =
                 | _ ->
                     NULL
             | _ -> NULL
+        | :? BlockStatement as bs ->
+            evalStatements bs.Statements []
+        | :? IfExpression as ie ->
+            let condition = ie.Condition |> eval
+            match isTruthy condition with
+            | true ->
+                ie.Consequence |> eval
+            | false ->
+                // in the go implementation, Alternative would be null;
+                // we instead have an empty alternative with no statements
+                match ie.Alternative.Statements with
+                | [] ->
+                    NULL
+                | _ ->
+                    ie.Alternative |> eval
         | _ -> NULL

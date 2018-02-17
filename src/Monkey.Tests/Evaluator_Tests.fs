@@ -94,4 +94,36 @@ module Evaluator_Tests =
         | Errors e ->
             e |> assertErrors
 
-    //let testIfElseExpressions input expected =
+
+    let ifElseExpressionTestCases() =
+        seq {
+            yield new TestCaseData("if (true) { 10 }", Some(10))
+            yield new TestCaseData("if (false) { 10 }", None)
+            yield new TestCaseData("if (1) { 10 }", Some(10))
+            yield new TestCaseData("if (1 < 2) { 10 }", Some(10))
+            yield new TestCaseData("if (1 > 2) { 10 }", None)
+            yield new TestCaseData("if (1 > 2) { 10 } else { 20 }", Some(20))
+            yield new TestCaseData("if (1 < 2) { 10 } else { 20 }", Some(10))
+        } 
+
+    let assertNullObject (object:Object) =
+        match object with
+        | :? Null as __ ->
+            Assert.Pass("Was null")
+        | _ ->
+            Assert.Fail((sprintf "Was not null, was %A" object))
+        
+
+    [<TestCaseSource("ifElseExpressionTestCases")>]
+    let testIfElseExpressions input (expected: int option) =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> eval
+            match expected with
+            | Some(i) ->
+                assertIntegerObject evaluated i
+            | None ->
+                assertNullObject evaluated
+        | Errors e ->
+            e |> assertErrors

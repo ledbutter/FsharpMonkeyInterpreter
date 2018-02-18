@@ -1,6 +1,8 @@
 ﻿namespace Monkey
 
 module Object =
+    open System.Collections.Generic
+
     type ObjectType = ObjectType of string
 
     module ObjectTypes =
@@ -61,3 +63,20 @@ module Object =
                 sprintf "%s" this.Message
             member __.Type() =
                 ObjectTypes.ERROR_OBJ
+
+    type Environment =
+        {
+            Store: Dictionary<string, Object>
+        }
+        member this.Get name =
+           let exists, value = this.Store.TryGetValue(name)
+           if exists then
+            Some(value)
+           else
+            None
+        member this.Set name value =
+            this.Store.[name] <- value
+            value
+
+    let createEnvironment() =
+        {Environment.Store = new Dictionary<string, Object>()}

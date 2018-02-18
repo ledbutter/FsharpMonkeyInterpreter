@@ -4,13 +4,12 @@ open Ast
 open Object
 
 module Evaluator =
-    open Object.ObjectTypes
 
     let TRUE = {Object.Boolean.Value = true} :> Object
     let FALSE = {Object.Boolean.Value = false} :> Object
     let NULL = Null() :> Object
 
-    let rec eval (node:Node) : Object =
+    let rec eval (node:Node) (env:Environment) : Object =
 
         let boolToBooleanObject boolVal =
             if boolVal then
@@ -18,31 +17,31 @@ module Evaluator =
             else
                 FALSE
 
-        let rec evalProgram (unevaluatedStatements : Statement List) (results : Object List) =
+        let rec evalProgram (unevaluatedStatements : Statement List) (results : Object List) env' =
             match unevaluatedStatements with
             | [] -> 
                 List.head results
             | x::xs ->
-                let result = eval x
+                let result = eval x env'
                 match result with
                 | :? ReturnValue as rv ->
                     rv.Value
                 | :? Error as __ ->
                     result
                 | _ ->
-                    evalProgram xs (result::results)
+                    evalProgram xs (result::results) env'
 
-        let rec evalBlockStatement (unevaluatedStatements : Statement List) (results : Object List) =
+        let rec evalBlockStatement (unevaluatedStatements : Statement List) (results : Object List) env' =
             match unevaluatedStatements with
             | [] ->
                 List.head results
             | x::xs ->
-                let result = eval x
+                let result = eval x env'
                 let resultType = result.Type()
                 if resultType = Object.ObjectTypes.RETURN_VALUE_OBJ || resultType = Object.ObjectTypes.ERROR_OBJ then
                     result
                 else
-                    evalBlockStatement xs (result::results)
+                    evalBlockStatement xs (result::results) env'
         
         let isTruthy object =
             if object = NULL then
@@ -62,19 +61,21 @@ module Evaluator =
             obj.Type() |> unwrapObjectTypeValue
 
         let isError (obj:Object) =
-            obj.Type() = ERROR_OBJ
+            obj.Type() = Object.ObjectTypes.ERROR_OBJ
 
         match node with
         | :? Program as p ->
-            evalProgram p.Statements []
+            evalProgram p.Statements [] env
         | :? ExpressionStatement as es ->
-            es.Expression |> eval
+            eval es.Expression env
+            //es.Expression |> eval
         | :? IntegerLiteral as il ->
             {Object.Value = il.Value} :> Object
         | :? Ast.Boolean as bl ->
             boolToBooleanObject bl.Value
         | :? PrefixExpression as pe ->
-            let right = pe.Right |> eval
+            let right = eval pe.Right env
+            //let right = pe.Right |> eval
 
             if isError right then
                 right
@@ -100,11 +101,13 @@ module Evaluator =
                     sprintf "unknown operator: %s%s" pe.Operator (unwrapObjectType right) |> newError
                 //NULL
         | :? InfixExpression as ie ->
-            let left = ie.Left |> eval
+            //let left = ie.Left |> eval
+            let left = eval ie.Left env
             if isError left then
                 left
             else
-                let right = ie.Right |> eval
+                let right = eval ie.Right env
+                //let right = ie.Right |> eval
                 if isError right then
                     right
                 else
@@ -152,15 +155,17 @@ module Evaluator =
                         sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
                         //NULL
         | :? BlockStatement as bs ->
-            evalBlockStatement bs.Statements []
+            evalBlockStatement bs.Statements [] env
         | :? IfExpression as ie ->
-            let condition = ie.Condition |> eval
+            //let condition = ie.Condition |> eval
+            let condition = eval ie.Condition env
             if isError condition then
                 condition
             else
                 match isTruthy condition with
                 | true ->
-                    ie.Consequence |> eval
+                    eval ie.Consequence env
+                    //ie.Consequence |> eval
                 | false ->
                     // in the go implementation, Alternative would be null;
                     // we instead have an empty alternative with no statements
@@ -168,11 +173,27 @@ module Evaluator =
                     | [] ->
                         NULL
                     | _ ->
-                        ie.Alternative |> eval
+                        eval ie.Alternative env
+                        //ie.Alternative |> eval
         | :? ReturnStatement as rs ->
-            let value = rs.ReturnValue |> eval
+            let value = eval rs.ReturnValue env
+            //let value = rs.ReturnValue |> eval
             if isError value then
                 value
             else
                 {ReturnValue.Value = value} :> Object
+        | :? LetStatement as ls ->
+            let value = eval ls.Value env
+            //let value = ls.Value |> eval
+            if isError value then
+                value
+            else
+                env.Set ls.Name.Value value
+        | :? Identifier as i ->
+            let envValue = env.Get i.Value
+            match envValue with
+            | Some(v) ->
+                v
+            | None ->
+                sprintf "identifier not found: %s" i.Value |> newError
         | _ -> NULL

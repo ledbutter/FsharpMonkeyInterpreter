@@ -23,6 +23,10 @@ module Evaluator_Tests =
         let integerObject = object :?> Integer
         Assert.AreEqual(expected, integerObject.Value)
 
+    let evaluateProgram p =
+        let environment = createEnvironment()
+        eval p environment
+
     [<TestCase("5", 5)>]
     [<TestCase("10", 10)>]
     [<TestCase("-5", -5)>]
@@ -42,7 +46,7 @@ module Evaluator_Tests =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let evaluated = p |> eval
+            let evaluated = p |> evaluateProgram
             assertIntegerObject evaluated expected
         | Errors e ->
             e |> assertErrors
@@ -74,7 +78,7 @@ module Evaluator_Tests =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let evaluated = p |> eval
+            let evaluated = p |> evaluateProgram
             assertBooleanObject evaluated expected
         | Errors e ->
             e |> assertErrors
@@ -89,7 +93,7 @@ module Evaluator_Tests =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let evaluated = p |> eval
+            let evaluated = p |> evaluateProgram
             assertBooleanObject evaluated expected
         | Errors e ->
             e |> assertErrors
@@ -119,7 +123,7 @@ module Evaluator_Tests =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let evaluated = p |> eval
+            let evaluated = p |> evaluateProgram
             match expected with
             | Some(i) ->
                 assertIntegerObject evaluated i
@@ -142,7 +146,7 @@ module Evaluator_Tests =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let evaluated = p |> eval
+            let evaluated = p |> evaluateProgram
             assertIntegerObject evaluated expected
         | Errors e ->
             e |> assertErrors
@@ -159,16 +163,30 @@ module Evaluator_Tests =
                     } 
                     return 1; 
                  }", "unknown operator: BOOLEAN + BOOLEAN")>]
+    [<TestCase("foobar", "identifier not found: foobar")>]
     let testErrorHandling input expected =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let evaluated = p |> eval
+            let evaluated = p |> evaluateProgram
             match evaluated with
             | :? Error as err ->
                 Assert.AreEqual(expected, err.Message)
             | _ ->
                 let errorMessage = sprintf "Expected error, but was %A" evaluated
                 Assert.Fail(errorMessage)
+        | Errors e ->
+            e |> assertErrors
+
+    [<TestCase("let a = 5; a;", 5)>]
+    [<TestCase("let a = 5 * 5; a;", 25)>]
+    [<TestCase("let a = 5; let b = a; b;", 5)>]
+    [<TestCase("let a = 5; let b = a; let c = a + b + 5; c;", 15)>]
+    let testLetStatements input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            assertIntegerObject evaluated expected
         | Errors e ->
             e |> assertErrors

@@ -146,3 +146,29 @@ module Evaluator_Tests =
             assertIntegerObject evaluated expected
         | Errors e ->
             e |> assertErrors
+
+    [<TestCase("5 + true;", "type mismatch: INTEGER + BOOLEAN")>]
+    [<TestCase("5 + true; 5;", "type mismatch: INTEGER + BOOLEAN")>]
+    [<TestCase("-true", "unknown operator: -BOOLEAN")>]
+    [<TestCase("true + false;", "unknown operator: BOOLEAN + BOOLEAN")>]
+    [<TestCase("5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN")>]
+    [<TestCase("if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN")>]
+    [<TestCase(@"if (10 > 1) { 
+                    if (10 > 1) { 
+                        return true + false; 
+                    } 
+                    return 1; 
+                 }", "unknown operator: BOOLEAN + BOOLEAN")>]
+    let testErrorHandling input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> eval
+            match evaluated with
+            | :? Error as err ->
+                Assert.AreEqual(expected, err.Message)
+            | _ ->
+                let errorMessage = sprintf "Expected error, but was %A" evaluated
+                Assert.Fail(errorMessage)
+        | Errors e ->
+            e |> assertErrors

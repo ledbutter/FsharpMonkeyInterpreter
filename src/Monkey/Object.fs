@@ -8,6 +8,7 @@ module Object =
         let BOOLEAN_OBJ = "BOOLEAN" |> ObjectType
         let NULL_OBJ = "NULL" |> ObjectType
         let RETURN_VALUE_OBJ = "RETURN_VALUE" |> ObjectType
+        let ERROR_OBJ = "ERROR" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -50,3 +51,13 @@ module Object =
                 sprintf "%s" (this.Value.Inspect())
             member __.Type() =
                 ObjectTypes.RETURN_VALUE_OBJ
+
+    type Error =
+        {
+            Message: string
+        }
+        interface Object with
+            member this.Inspect() =
+                sprintf "%s" this.Message
+            member __.Type() =
+                ObjectTypes.ERROR_OBJ

@@ -24,8 +24,7 @@ module Evaluator_Tests =
         Assert.AreEqual(expected, integerObject.Value)
 
     let evaluateProgram p =
-        let environment = createEnvironment()
-        eval p environment
+        eval p
 
     [<TestCase("5", 5)>]
     [<TestCase("10", 10)>]

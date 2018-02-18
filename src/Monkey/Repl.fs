@@ -7,7 +7,6 @@ open Parser
 open Evaluator
 
 module Repl =
-    open Object
 
     [<Literal>]
     let PROMPT = ">> "
@@ -24,7 +23,6 @@ module Repl =
             if obj.ReferenceEquals(value, null) then None
             else Some()
 
-        let env = createEnvironment()
         let input = reader.ReadLine()
         match input with
         | NotNull ->
@@ -35,7 +33,7 @@ module Repl =
                 for i in 0..e.Length-1 do
                     output.Print "%A" e.[i]
             | Program p ->
-                let evaluated = eval p env
+                let evaluated = eval p
                 output.Print "%s" (evaluated.Inspect())
 
             start reader output    

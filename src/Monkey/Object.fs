@@ -78,5 +78,4 @@ module Object =
             this.Store.[name] <- value
             value
 
-    let createEnvironment() =
-        {Environment.Store = new Dictionary<string, Object>()}
+    

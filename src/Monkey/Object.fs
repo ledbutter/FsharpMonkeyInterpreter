@@ -2,6 +2,8 @@
 
 module Object =
     open System.Collections.Generic
+    open Ast
+    open System
 
     type ObjectType = ObjectType of string
 
@@ -11,6 +13,7 @@ module Object =
         let NULL_OBJ = "NULL" |> ObjectType
         let RETURN_VALUE_OBJ = "RETURN_VALUE" |> ObjectType
         let ERROR_OBJ = "ERROR" |> ObjectType
+        let FUNCTION_OBJ = "FUNCTION" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -67,15 +70,41 @@ module Object =
     type Environment =
         {
             Store: Dictionary<string, Object>
+            Outer: Environment option
         }
         member this.Get name =
            let exists, value = this.Store.TryGetValue(name)
            if exists then
             Some(value)
            else
-            None
+            match this.Outer with
+            | Some(e) ->
+                let outerExists, outerValue = e.Store.TryGetValue(name)
+                if outerExists then
+                    Some(outerValue)
+                else
+                    None
+            | None ->
+                None
         member this.Set name value =
             this.Store.[name] <- value
             value
 
+    type Function =
+        {
+            Parameters: Identifier list
+            Body: BlockStatement
+            Env: Environment
+        }
+        interface Object with
+            member this.Inspect() =
+                let parameterValues = 
+                    this.Parameters
+                    |> Seq.map(fun s -> s.ToString())
+                    |> fun x -> x |> String.concat ", "
+                
+                sprintf "fn (%s) {%s %s %s}" parameterValues Environment.NewLine (this.Body.ToString()) Environment.NewLine
+
+            member __.Type() =
+                ObjectTypes.FUNCTION_OBJ
     

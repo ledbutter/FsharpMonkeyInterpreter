@@ -20,8 +20,14 @@ module Evaluator_Tests =
         |> parseProgram
 
     let assertIntegerObject (object:Object) expected =
-        let integerObject = object :?> Integer
-        Assert.AreEqual(expected, integerObject.Value)
+        match object with
+        | :? Integer as i ->
+            Assert.AreEqual(expected, i.Value)
+        | :? Error as e ->
+            Assert.Fail(e.Message)
+        | _ ->
+            sprintf "Unexpected object %A" object |> ignore
+            Assert.Fail("Wrong object type")
 
     let evaluateProgram p =
         eval p
@@ -182,6 +188,34 @@ module Evaluator_Tests =
     [<TestCase("let a = 5; let b = a; b;", 5)>]
     [<TestCase("let a = 5; let b = a; let c = a + b + 5; c;", 15)>]
     let testLetStatements input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            assertIntegerObject evaluated expected
+        | Errors e ->
+            e |> assertErrors
+
+    let testFunctionObject() =
+        let input = "fn(x) { x + 2; };"
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            let functionObject = evaluated :?> Function
+            Assert.AreEqual(1, functionObject.Parameters.Length)
+            Assert.AreEqual("x", functionObject.Parameters.[0].ToString())
+            Assert.AreEqual("(x + 2)", functionObject.Body.ToString())
+        | Errors e ->
+            e |> assertErrors
+
+    [<TestCase("let identity = fn(x) { x; }; identity(5);", 5)>] 
+    [<TestCase("let identity = fn(x) { return x; }; identity(5);", 5)>] 
+    [<TestCase("let double = fn(x) { x * 2; }; double(5);", 10)>] 
+    [<TestCase("let add = fn(x, y) { x + y; }; add(5, 5);", 10)>] 
+    [<TestCase("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20)>] 
+    [<TestCase("fn(x) { x; }(5)", 5)>]
+    let testFunctionApplication input expected =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 

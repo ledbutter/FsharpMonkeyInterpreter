@@ -223,3 +223,20 @@ module Evaluator_Tests =
             assertIntegerObject evaluated expected
         | Errors e ->
             e |> assertErrors
+
+    [<Test>]
+    let testClosures() =
+        let input = @"
+            let newAdder = fn(x) {
+                fn(y) { x + y };
+            };
+            
+            let addTwo = newAdder(2);
+            addTwo(2);"
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            assertIntegerObject evaluated 4
+        | Errors e ->
+            e |> assertErrors

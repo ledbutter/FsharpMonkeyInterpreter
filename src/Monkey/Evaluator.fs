@@ -37,35 +37,33 @@ module Evaluator =
         let isError (obj:Object) =
             obj.Type() = Object.ObjectTypes.ERROR_OBJ
 
-        let env = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
-
-        let rec evalRec (node:Node) (currentEnv:Environment) : Object =
+        let rec evalRec (node:Node) (currentEnv:Environment) : (Object*Environment) =
 
             let rec evalProgram (unevaluatedStatements : Statement List) (results : Object List) programEnv =
                 match unevaluatedStatements with
                 | [] -> 
-                    List.head results
+                    ((List.head results), programEnv)
                 | x::xs ->
-                    let result = evalRec x programEnv
+                    let result, env = evalRec x programEnv
                     match result with
                     | :? ReturnValue as rv ->
-                        rv.Value
+                        (rv.Value, env)
                     | :? Error as __ ->
-                        result
+                        (result, env)
                     | _ ->
-                        evalProgram xs (result::results) programEnv
+                        evalProgram xs (result::results) env
 
             let rec evalBlockStatement (unevaluatedStatements : Statement List) (results : Object List) blockEnv =
                 match unevaluatedStatements with
                 | [] ->
-                    List.head results
+                    ((List.head results), blockEnv)
                 | x::xs ->
-                    let result = evalRec x blockEnv
+                    let result, env = evalRec x blockEnv
                     let resultType = result.Type()
                     if resultType = Object.ObjectTypes.RETURN_VALUE_OBJ || resultType = Object.ObjectTypes.ERROR_OBJ then
-                        result
+                        result, env
                     else
-                        evalBlockStatement xs (result::results) blockEnv
+                        evalBlockStatement xs (result::results) env
 
             match node with
             | :? Program as p ->
@@ -73,42 +71,44 @@ module Evaluator =
             | :? ExpressionStatement as es ->
                 evalRec es.Expression currentEnv
             | :? IntegerLiteral as il ->
-                {Object.Value = il.Value} :> Object
+                {Object.Value = il.Value} :> Object, currentEnv
             | :? Ast.Boolean as bl ->
-                boolToBooleanObject bl.Value
+                ((boolToBooleanObject bl.Value), currentEnv)
             | :? PrefixExpression as pe ->
-                let right = evalRec pe.Right currentEnv
+                let right, env = evalRec pe.Right currentEnv
 
                 //todo: all this isError stuff should probably be switched to a railroad-style failure system?
                 if isError right then
-                    right
+                    right, env
                 else
                     match pe.Operator with
                     | "!" ->
                         if right = TRUE then
-                            FALSE
+                            FALSE, env
                         else if right = FALSE then
-                            TRUE
+                            TRUE, env
                         else if right = NULL then
-                            TRUE
+                            TRUE, env
                         else
-                            FALSE
+                            FALSE, env
                     | "-" ->
                         match right with
                         | :? Integer as i ->
-                            {Integer.Value = -i.Value} :> Object
+                            {Integer.Value = -i.Value} :> Object, env
                         | _ ->
-                            sprintf "unknown operator: -%s" (unwrapObjectType right) |> newError
+                            let error = sprintf "unknown operator: -%s" (unwrapObjectType right) |> newError
+                            error, env
                     | _ ->
-                        sprintf "unknown operator: %s%s" pe.Operator (unwrapObjectType right) |> newError
+                        let error = sprintf "unknown operator: %s%s" pe.Operator (unwrapObjectType right) |> newError
+                        error, env
             | :? InfixExpression as ie ->
-                let left = evalRec ie.Left currentEnv
+                let left, env = evalRec ie.Left currentEnv
                 if isError left then
-                    left
+                    left, env
                 else
-                    let right = evalRec ie.Right currentEnv
+                    let right, env = evalRec ie.Right env
                     if isError right then
-                        right
+                        right, env
                     else
                         match left with
                         | :? Integer as li ->
@@ -116,114 +116,121 @@ module Evaluator =
                             | :? Integer as ri ->
                                 match ie.Operator with
                                 | "+" ->
-                                    {Integer.Value = li.Value + ri.Value} :> Object
+                                    {Integer.Value = li.Value + ri.Value} :> Object, env
                                 | "-" ->
-                                    {Integer.Value = li.Value - ri.Value} :> Object
+                                    {Integer.Value = li.Value - ri.Value} :> Object, env
                                 | "*" ->
-                                    {Integer.Value = li.Value * ri.Value} :> Object
+                                    {Integer.Value = li.Value * ri.Value} :> Object, env
                                 | "/" ->
-                                    {Integer.Value = li.Value / ri.Value} :> Object
+                                    {Integer.Value = li.Value / ri.Value} :> Object, env
                                 | "<" ->
-                                    boolToBooleanObject (li.Value < ri.Value)
+                                    boolToBooleanObject (li.Value < ri.Value), env
                                 | ">" ->
-                                    boolToBooleanObject (li.Value > ri.Value)
+                                    boolToBooleanObject (li.Value > ri.Value), env
                                 | "==" ->
-                                    boolToBooleanObject (li.Value = ri.Value)
+                                    boolToBooleanObject (li.Value = ri.Value), env
                                 | "!=" ->
-                                    boolToBooleanObject (li.Value <> ri.Value)
+                                    boolToBooleanObject (li.Value <> ri.Value), env
                                 | _ ->
-                                    sprintf "unknown operator: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                    let error = sprintf "unknown operator: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                    error, env
                             | _ ->
-                                sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                let error = sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                error, env
                         | :? Boolean as lb ->
                             match right with
                             | :? Boolean as rb ->
                                 match ie.Operator with
                                 | "==" ->
-                                    boolToBooleanObject (lb.Value = rb.Value)
+                                    ((boolToBooleanObject (lb.Value = rb.Value)), env)
                                 | "!=" ->
-                                    boolToBooleanObject (lb.Value <> rb.Value)
+                                    ((boolToBooleanObject (lb.Value <> rb.Value)), env)
                                 | _ ->
-                                    sprintf "unknown operator: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                    let error = sprintf "unknown operator: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                    error, env
                             | _ ->
-                                sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                let error = sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                error, env
                         | _ ->
-                            sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                            let error = sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                            error, env
             | :? BlockStatement as bs ->
                 evalBlockStatement bs.Statements [] currentEnv
             | :? IfExpression as ie ->
-                let condition = evalRec ie.Condition currentEnv
+                let condition, env = evalRec ie.Condition currentEnv
                 if isError condition then
-                    condition
+                    condition, env
                 else
                     match isTruthy condition with
                     | true ->
-                        evalRec ie.Consequence currentEnv
+                        evalRec ie.Consequence env
                     | false ->
                         // in the go implementation, Alternative would be null;
                         // we instead have an empty alternative with no statements
                         match ie.Alternative.Statements with
                         | [] ->
-                            NULL
+                            NULL, env
                         | _ ->
-                            evalRec ie.Alternative currentEnv
+                            evalRec ie.Alternative env
             | :? ReturnStatement as rs ->
-                let value = evalRec rs.ReturnValue currentEnv
+                let value, env = evalRec rs.ReturnValue currentEnv
                 if isError value then
-                    value
+                    value, env
                 else
-                    {ReturnValue.Value = value} :> Object
+                    {ReturnValue.Value = value} :> Object, env
             | :? LetStatement as ls ->
-                let value = evalRec ls.Value currentEnv
+                let value, env = evalRec ls.Value currentEnv
                 if isError value then
-                    value
+                    value, env
                 else
-                    currentEnv.Set ls.Name.Value value
+                    ((currentEnv.Set ls.Name.Value value), env)
             | :? Identifier as i ->
                 let envValue = currentEnv.Get i.Value
                 match envValue with
                 | Some(v) ->
-                    v
+                    v, currentEnv
                 | None ->
-                    sprintf "identifier not found: %s" i.Value |> newError
+                    let error = sprintf "identifier not found: %s" i.Value |> newError
+                    error, currentEnv
             | :? FunctionLiteral as fl ->
-                {Function.Body = fl.Body; Parameters = fl.Parameters; Env = env} :> Object
+                {Function.Body = fl.Body; Parameters = fl.Parameters; Env = currentEnv} :> Object, currentEnv
             | :? CallExpression as ce ->
-                let funcObject = evalRec ce.Function currentEnv
+                let funcObject, env = evalRec ce.Function currentEnv
                 if isError funcObject then
-                    funcObject
+                    funcObject, env
                 else
-                    let rec evalExpressions expressions results env'' =
+                    let rec evalExpressions expressions results env' =
                         match expressions with
                         | [] ->
-                            results
+                            results, env'
                         | x::xs ->
-                            let evaluated = evalRec x env''
+                            let evaluated, env'' = evalRec x env'
                             if isError evaluated then
-                                [evaluated]
+                                [evaluated], env''
                             else
                                 evalExpressions xs (evaluated::results) env''
-                    let args = evalExpressions ce.Arguments [] currentEnv
+                    let args, env = evalExpressions ce.Arguments [] currentEnv
                     match args with
                     | x::xs when isError x && List.isEmpty xs ->
-                        x
+                        x, env
                     | _ ->
                         let func = funcObject :?> Function
-                        let argDict = new System.Collections.Generic.Dictionary<string, Object>()
+                        let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
                         for i in 0..func.Parameters.Length-1 do
                             let argValue = args.[i]
-                            argDict.Add((func.Parameters.[i].Value), argValue)
-
-                        let funcEnvironment = {Environment.Store = argDict; Outer = Some(currentEnv)}
-                        let evaluated = evalRec func.Body funcEnvironment
+                            let param = func.Parameters.[i]
+                            funcEnvironment.Set param.Value argValue |> ignore
+                        
+                        let evaluated, env = evalRec func.Body funcEnvironment
                         match evaluated with
                         | :? ReturnValue as rv ->
-                            rv.Value
+                            rv.Value, env
                         | _ ->
-                            evaluated
+                            evaluated, env
+            | _ -> 
+                NULL, currentEnv
 
-            | _ -> NULL
-
-        evalRec node env
+        let res, _ = evalRec node {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        res
 
         

@@ -240,3 +240,15 @@ module Evaluator_Tests =
             assertIntegerObject evaluated 4
         | Errors e ->
             e |> assertErrors
+
+    [<Test>]
+    let testStringLiteral() =
+        let input = @"""Hello World!"""
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            let stringLiteral = evaluated :?> String
+            Assert.AreEqual("Hello World!", stringLiteral.Value)
+        | Errors e ->
+            e |> assertErrors

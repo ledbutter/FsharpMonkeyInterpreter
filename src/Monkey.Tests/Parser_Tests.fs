@@ -13,9 +13,9 @@ module Parser_Tests =
         Assert.AreEqual(expectedName, letStatement.Name.TokenLiteral(), "name token literal")
 
     let assertErrors (errors:string list) =
-        sprintf "Parser had %i errors" errors.Length |> ignore
+        printfn "Parser had %i errors" errors.Length
         for error in errors do
-            sprintf "Parser error: %s" error |> ignore
+            printfn "Parser error: %s" error 
         Assert.Fail("Parsing failed")
 
     let assertReturnStatement (statement:Statement) expectedReturnValue =
@@ -269,3 +269,16 @@ module Parser_Tests =
             assertIntegerLiteral (callExpression.Arguments.[0] :?> IntegerLiteral) 1L
             assertInfixExpression callExpression.Arguments.[1] "2" "*" "3"
             assertInfixExpression callExpression.Arguments.[2] "4" "+" "5"
+
+    [<Test>]
+    let testStringLiteralExpression() =
+        let input = @"""hello world"""
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let stringLiteral = statement.Expression :?> StringLiteral
+            Assert.AreEqual("hello world", stringLiteral.Value)

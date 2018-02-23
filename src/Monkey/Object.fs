@@ -2,7 +2,6 @@
 
 module Object =
     open System.Collections.Generic
-    open Ast
     open System
 
     type ObjectType = ObjectType of string
@@ -14,6 +13,7 @@ module Object =
         let RETURN_VALUE_OBJ = "RETURN_VALUE" |> ObjectType
         let ERROR_OBJ = "ERROR" |> ObjectType
         let FUNCTION_OBJ = "FUNCTION" |> ObjectType
+        let STRING_OBJ = "STRING" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -92,8 +92,8 @@ module Object =
 
     type Function =
         {
-            Parameters: Identifier list
-            Body: BlockStatement
+            Parameters: Ast.Identifier list
+            Body: Ast.BlockStatement
             Env: Environment
         }
         interface Object with
@@ -107,4 +107,14 @@ module Object =
 
             member __.Type() =
                 ObjectTypes.FUNCTION_OBJ
+
+    type String = 
+        { 
+            Value: string 
+        }
+        interface Object with
+            member this.Inspect() =
+                sprintf "%s" this.Value
+            member __.Type() =
+                ObjectTypes.STRING_OBJ
     

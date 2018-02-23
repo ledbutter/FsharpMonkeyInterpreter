@@ -4,10 +4,10 @@ open NUnit.Framework
 open Monkey.Token
 open Monkey.Lexer
 
-module LexerTests =
+module Lexer_Tests =
 
     [<Test>]
-    let testNextTokenAndReadChar_2() =
+    let testNextTokenAndReadChar() =
         let input = @"let five = 5;
             let ten = 10;
 
@@ -27,6 +27,8 @@ module LexerTests =
 
             10 == 10;
             10 != 9;
+            ""foobar""
+            ""foo bar""
             "
 
         let expectedResults = [
@@ -103,6 +105,8 @@ module LexerTests =
             NOT_EQ, "!="
             INT, "9"
             SEMICOLON, ";"
+            STRING, "foobar"
+            STRING, "foo bar"
             EOF, (char 0).ToString()
         ]
 

@@ -18,6 +18,8 @@ module Token =
     let IDENT = "IDENT"
     [<Literal>]
     let INT = "INT"
+    [<Literal>]
+    let STRING = "STRING"
 
     // Operators
     [<Literal>]

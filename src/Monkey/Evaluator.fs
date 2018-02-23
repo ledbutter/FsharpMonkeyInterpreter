@@ -71,7 +71,7 @@ module Evaluator =
             | :? ExpressionStatement as es ->
                 evalRec es.Expression currentEnv
             | :? IntegerLiteral as il ->
-                {Object.Value = il.Value} :> Object, currentEnv
+                {Integer.Value = il.Value} :> Object, currentEnv
             | :? Ast.Boolean as bl ->
                 ((boolToBooleanObject bl.Value), currentEnv)
             | :? PrefixExpression as pe ->
@@ -227,6 +227,8 @@ module Evaluator =
                             rv.Value, env
                         | _ ->
                             evaluated, env
+            | :? StringLiteral as sl ->
+                {String.Value = sl.Value} :> Object, currentEnv
             | _ -> 
                 NULL, currentEnv
 

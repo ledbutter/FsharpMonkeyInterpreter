@@ -69,6 +69,11 @@ module Parser =
                     let errorMessage = sprintf "Could not parse %s as an integer" currentToken.Literal
                     ExpressionErrors([errorMessage])
 
+            let parseStringLiteral currentToken remainingTokens _ =
+                //let stringVal = currentToken.Literal
+                let stringLiteral = {StringLiteral.Token = currentToken; Value = currentToken.Literal} :> Expression
+                ParsedExpression(stringLiteral, remainingTokens)
+
             let parsePrefixExpression currentToken remainingTokens parseNext =
                 let rightResult = parseNext OperatorPrecedence.Prefix (List.head remainingTokens) (List.tail remainingTokens)
                 match rightResult with
@@ -244,7 +249,8 @@ module Parser =
                                                 FALSE, parseBoolean;
                                                 LPAREN, parseGroupedExpression;
                                                 IF, parseIfExpression;
-                                                FUNCTION, parseFunctionLiteral;]
+                                                FUNCTION, parseFunctionLiteral;
+                                                STRING, parseStringLiteral;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

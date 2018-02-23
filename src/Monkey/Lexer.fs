@@ -18,6 +18,12 @@ module Lexer =
         let isNumber ch =
             Char.IsNumber(ch)
 
+        let (|IsEmpty|_|) lexer =
+            if (lexer.CurrentChar = emptyChar) then
+                Some()
+            else
+                None
+
         let incrementPosition lexerPos =
             let incrementPartial newCurrentChar =
                 {lexerPos with CurrentChar = newCurrentChar; Pos = lexerPos.ReadPos; ReadPos = lexerPos.ReadPos + 1}
@@ -66,10 +72,30 @@ module Lexer =
             else
                 input.[lexerPos.ReadPos]
 
+        let readString lexerPos =
+            let createStringAndValue endLexPos =
+                let stringValue = input.[lexerPos.Pos..endLexPos.Pos - 1]
+                let nextLexPos = incrementPosition endLexPos
+                (nextLexPos, stringValue)
+
+            let rec readStringRec currentLexPos =
+                match currentLexPos with
+                | IsEmpty ->
+                    currentLexPos |> createStringAndValue 
+                | clp ->
+                    match clp.CurrentChar with
+                    | '"' ->
+                        clp |> createStringAndValue
+                    | _ ->
+                        let newPos = incrementPosition clp
+                        readStringRec newPos
+            readStringRec lexerPos
+
         let rec nextTokenRec lexerPos tokens =
-            if lexerPos.CurrentChar = emptyChar then
+            match lexerPos with
+            | IsEmpty ->
                 List.rev tokens
-            else 
+            | _ -> 
                 let wsPos = skipWhitespace lexerPos
                 let partialToken = newToken (wsPos.CurrentChar.ToString())
                 let oneCharPosIncrement = incrementPosition wsPos
@@ -103,6 +129,13 @@ module Lexer =
                     | '*' -> (oneCharPosIncrement, partialToken ASTERISK)
                     | '>' -> (oneCharPosIncrement, partialToken GT)
                     | '<' -> (oneCharPosIncrement, partialToken LT)
+                    | '"' ->
+                        // skip over the " and read the string literal
+                        let newPos, stringValue = readString oneCharPosIncrement
+                        let stringToken = newToken stringValue STRING
+                        (newPos, stringToken)
+                    | c when c = emptyChar ->
+                        (oneCharPosIncrement, partialToken EOF)
                     | _ -> 
                         if isLetter wsPos.CurrentChar then
                             let newPos, identifier = readIdentifier wsPos
@@ -113,8 +146,6 @@ module Lexer =
                             let newPos, numberValue = readNumber wsPos
                             let numberToken = newToken numberValue INT
                             (newPos, numberToken)
-                        else if wsPos.CurrentChar = emptyChar then
-                            (oneCharPosIncrement, partialToken EOF)
                         else
                             (oneCharPosIncrement, partialToken ILLEGAL)
                 nextTokenRec newLexerPos (token::tokens)

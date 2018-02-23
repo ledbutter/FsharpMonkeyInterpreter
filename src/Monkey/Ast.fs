@@ -201,6 +201,18 @@ module Ast =
 
             sprintf "%s(%s)" (x.Function.ToString()) argumentValues
 
+    type StringLiteral =
+        {
+            Token: Token
+            Value: string
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            x.Token.Literal
+
     // dummy types
     // todo: figure out a way to get rid of this
     type EmptyStatement = 

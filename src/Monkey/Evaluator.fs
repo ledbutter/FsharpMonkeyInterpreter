@@ -151,6 +151,18 @@ module Evaluator =
                             | _ ->
                                 let error = sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
                                 error, env
+                        | :? String as ls ->
+                            match right with
+                            | :? String as rs ->
+                                match ie.Operator with
+                                | "+" ->
+                                    {String.Value = ls.Value + rs.Value} :> Object , env
+                                | _ ->
+                                    let error = sprintf "unknown operator: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                    error, env
+                            | _ ->
+                                let error = sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
+                                error, env
                         | _ ->
                             let error = sprintf "type mismatch: %s %s %s" (unwrapObjectType left) ie.Operator (unwrapObjectType right) |> newError
                             error, env

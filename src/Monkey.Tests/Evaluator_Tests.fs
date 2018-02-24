@@ -169,6 +169,7 @@ module Evaluator_Tests =
                     return 1; 
                  }", "unknown operator: BOOLEAN + BOOLEAN")>]
     [<TestCase("foobar", "identifier not found: foobar")>]
+    [<TestCase(@"""Hello"" - ""World""", "unknown operator: STRING - STRING")>]
     let testErrorHandling input expected =
         let programResult = generateProgram input
         match programResult with
@@ -244,6 +245,18 @@ module Evaluator_Tests =
     [<Test>]
     let testStringLiteral() =
         let input = @"""Hello World!"""
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            let stringLiteral = evaluated :?> String
+            Assert.AreEqual("Hello World!", stringLiteral.Value)
+        | Errors e ->
+            e |> assertErrors
+
+    [<Test>]
+    let testStringConcatenation() =
+        let input = @"""Hello"" + "" "" + ""World!"""
         let programResult = generateProgram input
         match programResult with
         | Program p -> 

@@ -11,6 +11,34 @@ module Evaluator =
 
     let eval node : Object =
 
+        let newError errorMessage =
+            {Error.Message = errorMessage} :> Object
+
+        let unwrapObjectType (obj:Object) =
+            let unwrapObjectTypeValue (ObjectType ot) = ot
+            obj.Type() |> unwrapObjectTypeValue
+
+        let (|SingleElementArray|_|) arr =
+            if List.length arr = 1 then Some(List.head arr)
+            else None
+
+        let len (args: Object list) =
+            match args with
+            | SingleElementArray e ->
+                match e with
+                | :? String as s ->
+                    {Integer.Value = (int64)(s.Value.Length)} :> Object
+                | _ ->
+                    let errorMsg = sprintf @"argument to ""len"" not supported, got %s" (e |> unwrapObjectType)
+                    errorMsg |> newError
+            | _ ->
+                let errorMsg = sprintf "wrong number of arguments. got=%i, want=1" args.Length
+                errorMsg |> newError
+
+
+        let builtIns = dict [ "len", {BuiltIn.Fn = len}; ]
+
+
         let boolToBooleanObject boolVal =
                 if boolVal then
                     TRUE
@@ -27,12 +55,7 @@ module Evaluator =
             else
                 true
 
-        let newError errorMessage =
-            {Error.Message = errorMessage} :> Object
-
-        let unwrapObjectType (obj:Object) =
-            let unwrapObjectTypeValue (ObjectType ot) = ot
-            obj.Type() |> unwrapObjectTypeValue
+        
 
         let isError (obj:Object) =
             obj.Type() = Object.ObjectTypes.ERROR_OBJ
@@ -202,8 +225,13 @@ module Evaluator =
                 | Some(v) ->
                     v, currentEnv
                 | None ->
-                    let error = sprintf "identifier not found: %s" i.Value |> newError
-                    error, currentEnv
+
+                    let found, builtIn = builtIns.TryGetValue(i.Value)
+                    if found then
+                        builtIn :> Object, currentEnv
+                    else
+                        let error = sprintf "identifier not found: %s" i.Value |> newError
+                        error, currentEnv
             | :? FunctionLiteral as fl ->
                 {Function.Body = fl.Body; Parameters = fl.Parameters; Env = currentEnv} :> Object, currentEnv
             | :? CallExpression as ce ->
@@ -222,23 +250,31 @@ module Evaluator =
                             else
                                 evalExpressions xs (evaluated::results) env''
                     let args, env = evalExpressions ce.Arguments [] currentEnv
-                    match args with
-                    | x::xs when isError x && List.isEmpty xs ->
-                        x, env
-                    | _ ->
-                        let func = funcObject :?> Function
-                        let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
-                        for i in 0..func.Parameters.Length-1 do
-                            let argValue = args.[i]
-                            let param = func.Parameters.[i]
-                            funcEnvironment.Set param.Value argValue |> ignore
-                        
-                        let evaluated, env = evalRec func.Body funcEnvironment
-                        match evaluated with
-                        | :? ReturnValue as rv ->
-                            rv.Value, env
+                    match funcObject with
+                    | :? Function as fn ->
+                        match args with
+                        | x::xs when isError x && List.isEmpty xs ->
+                            x, env
                         | _ ->
-                            evaluated, env
+                            //let func = funcObject :?> Function
+                            let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
+                            for i in 0..fn.Parameters.Length-1 do
+                                let argValue = args.[i]
+                                let param = fn.Parameters.[i]
+                                funcEnvironment.Set param.Value argValue |> ignore
+                        
+                            let evaluated, env = evalRec fn.Body funcEnvironment
+                            match evaluated with
+                            | :? ReturnValue as rv ->
+                                rv.Value, env
+                            | _ ->
+                                evaluated, env
+                    | :? BuiltIn as bn ->
+                        let evaluated = bn.Fn args
+                        evaluated, env
+                    | _ ->
+                        let errorMessage = sprintf "not a function: %A" funcObject
+                        errorMessage |> newError, env
             | :? StringLiteral as sl ->
                 {String.Value = sl.Value} :> Object, currentEnv
             | _ -> 

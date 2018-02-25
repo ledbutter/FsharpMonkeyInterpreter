@@ -14,6 +14,7 @@ module Object =
         let ERROR_OBJ = "ERROR" |> ObjectType
         let FUNCTION_OBJ = "FUNCTION" |> ObjectType
         let STRING_OBJ = "STRING" |> ObjectType
+        let BUILTIN_OBJ = "BUILTIN" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -117,4 +118,14 @@ module Object =
                 sprintf "%s" this.Value
             member __.Type() =
                 ObjectTypes.STRING_OBJ
+
+    type BuiltIn = 
+        {
+            Fn: Object list -> Object
+        }
+        interface Object with
+            member __.Inspect() =
+                sprintf "builtin function"
+            member __.Type() =
+                ObjectTypes.BUILTIN_OBJ
     

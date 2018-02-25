@@ -197,6 +197,7 @@ module Evaluator_Tests =
         | Errors e ->
             e |> assertErrors
 
+    [<Test>]
     let testFunctionObject() =
         let input = "fn(x) { x + 2; };"
         let programResult = generateProgram input
@@ -263,5 +264,35 @@ module Evaluator_Tests =
             let evaluated = p |> evaluateProgram
             let stringLiteral = evaluated :?> String
             Assert.AreEqual("Hello World!", stringLiteral.Value)
+        | Errors e ->
+            e |> assertErrors
+
+    type IntOrString = I of int | S of string
+
+    let builtInFunctionTestCases() =
+        seq {
+            yield new TestCaseData(@"len("""")", I 0)
+            yield new TestCaseData(@"len(""four"")", I 4)
+            yield new TestCaseData(@"len(""hello world"")", I 11)
+            yield new TestCaseData(@"len(1)", S @"argument to ""len"" not supported, got INTEGER")
+            yield new TestCaseData(@"len(""one"", ""two"")", S "wrong number of arguments. got=2, want=1")
+        }
+
+    [<TestCaseSource("builtInFunctionTestCases")>]
+    let testBuiltInFunctions input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match expected with
+            | I i ->
+                assertIntegerObject evaluated i
+            | S s ->
+                match evaluated with
+                | :? Monkey.Object.Error as e ->
+                    Assert.AreEqual(s, e.Message)
+                | _ ->
+                    let errorMessage = sprintf "Expected error, got %A" evaluated
+                    Assert.Fail(errorMessage)
         | Errors e ->
             e |> assertErrors

@@ -59,6 +59,10 @@ module Token =
     let LBRACE = "{"
     [<Literal>]
     let RBRACE = "}"
+    [<Literal>]
+    let LBRACKET = "["
+    [<Literal>]
+    let RBRACKET = "]"
 
     // Keywords
     [<Literal>]

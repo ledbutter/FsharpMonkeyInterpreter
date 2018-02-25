@@ -282,3 +282,19 @@ module Parser_Tests =
             let statement = p.Statements.[0] :?> ExpressionStatement
             let stringLiteral = statement.Expression :?> StringLiteral
             Assert.AreEqual("hello world", stringLiteral.Value)
+
+    [<Test>]
+    let testParsingArrayLiterals() =
+        let input = "[1, 2 * 2, 3 + 3]"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let arrayLiteral = statement.Expression :?> ArrayLiteral
+            Assert.AreEqual(3, arrayLiteral.Elements.Length)
+            assertIntegerLiteral (arrayLiteral.Elements.[0] :?> IntegerLiteral) 1L
+            assertInfixExpression (arrayLiteral.Elements.[1]) "2" "*" "2"
+            assertInfixExpression (arrayLiteral.Elements.[2]) "3" "+" "3"

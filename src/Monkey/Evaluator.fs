@@ -35,7 +35,6 @@ module Evaluator =
                 let errorMsg = sprintf "wrong number of arguments. got=%i, want=1" args.Length
                 errorMsg |> newError
 
-
         let builtIns = dict [ "len", {BuiltIn.Fn = len}; ]
 
 

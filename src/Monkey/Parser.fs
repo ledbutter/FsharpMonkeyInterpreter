@@ -5,6 +5,7 @@ open Monkey.Token
 
 
 module Parser =
+    open System
 
     type ParserOutput =
         | Program of Program
@@ -206,38 +207,59 @@ module Parser =
                     let errorMessage = combineStrings errors
                     ExpressionErrors([errorMessage])
 
-            let parseCallArguments remainingTokens parseNext =
-                match remainingTokens with
-                | [] -> ([], [], [])
-                | x::xs when x.Type = RPAREN -> ([], xs, [])
-                | x::xs ->
-                    let rec parseCallArgumentsRec remainingTokens' arguments =
-                        match remainingTokens' with
-                        | x::xs when x.Type = COMMA ->
-                            let parseNextResult = parseNext OperatorPrecedence.Lowest (List.head xs) (List.tail xs)
-                            match parseNextResult with
-                            | ParsedExpression (nextArgument, newRemaining) ->
-                                parseCallArgumentsRec newRemaining (nextArgument::arguments)
-                            | ExpressionErrors err -> ([], [], err)//err
-                        | _::_ ->
-                            // should be a ), so let's skip it
-                            (List.rev arguments, (List.tail remainingTokens'), [])
-                        | [] ->
-                            (List.rev arguments, [], [])
+            let parseExpressionList remainingTokens endTokenType parse =
+                let rec parseExpressionListRec remainingTokens' expressions =
+                    match remainingTokens' with
+                    | x::xs when x.Type = COMMA ->
+                        let nextExpressionResult = parse OperatorPrecedence.Lowest (List.head xs) (List.tail xs)
+                        match nextExpressionResult with
+                        | ParsedExpression(nextExpression, newRemaining) ->
+                            parseExpressionListRec newRemaining (nextExpression::expressions)
+                        | ExpressionErrors err -> ([], [], err)
+                    | _ ->
+                        (List.rev expressions, remainingTokens', [])
 
-                    let firstArgumentResult = parseNext OperatorPrecedence.Lowest x xs
-                    match firstArgumentResult with
-                    | ParsedExpression(firstArgument, remainingAfterFirst) ->
-                        parseCallArgumentsRec remainingAfterFirst [firstArgument]
-                    | ExpressionErrors err -> ([], [], err)
+                match remainingTokens with
+                | x::_ when x.Type = endTokenType ->
+                    ([], [], ["Somehow started out with next token matching end"])
+                | x::xs ->
+                    let firstExpressionResult = parse OperatorPrecedence.Lowest x xs
+                    match firstExpressionResult with
+                    | ParsedExpression(firstExpression, remainingAfterFirst) ->
+                        let (expressions, newRemaining, errors) = parseExpressionListRec remainingAfterFirst [firstExpression]
+                        match errors with
+                        | [] ->
+                            // make sure we are at the end
+                            match newRemaining with
+                            | x::xs when x.Type = endTokenType ->
+                                (expressions, xs, [])
+                            | _ ->
+                                let errorMsg = sprintf "Did not end on expected end token type %A instead on %A" endTokenType (List.head newRemaining)
+                                ([], [], [errorMsg])
+                        | _ -> 
+                            ([], [], errors)
+                    | ExpressionErrors err -> 
+                        ([], [], err)
+                | _ -> 
+                    ([], [], ["Somehow got in empty expression list"])
 
             let parseCallExpression left currentToken remainingTokens parseNext =
-                let (arguments, newRemaining, errors) = parseCallArguments remainingTokens parseNext
+                let (arguments, newRemaining, errors) = parseExpressionList remainingTokens RPAREN parseNext
                 match errors with
                 | [] ->
                     let callExpression = {CallExpression.Token = currentToken; Function = left; Arguments = arguments} :> Expression
                     ParsedExpression(callExpression, newRemaining)
                 | _ -> ExpressionErrors(errors)
+
+            let parseArrayLiteral currentToken remainingTokens parseNext =
+                let expressions, newRemaining, errors = parseExpressionList remainingTokens RBRACKET parseNext
+                match errors with
+                | [] ->
+                    let arrayLiteral = {ArrayLiteral.Token = currentToken; Elements = expressions} :> Expression
+                    ParsedExpression(arrayLiteral, newRemaining)
+                | _ ->
+                    ExpressionErrors(errors)
+                
             
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
@@ -250,7 +272,8 @@ module Parser =
                                                 LPAREN, parseGroupedExpression;
                                                 IF, parseIfExpression;
                                                 FUNCTION, parseFunctionLiteral;
-                                                STRING, parseStringLiteral;]
+                                                STRING, parseStringLiteral;
+                                                LBRACKET, parseArrayLiteral;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

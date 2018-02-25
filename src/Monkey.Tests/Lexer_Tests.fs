@@ -29,6 +29,7 @@ module Lexer_Tests =
             10 != 9;
             ""foobar""
             ""foo bar""
+            [1, 2];
             "
 
         let expectedResults = [
@@ -107,6 +108,12 @@ module Lexer_Tests =
             SEMICOLON, ";"
             STRING, "foobar"
             STRING, "foo bar"
+            LBRACKET, "["
+            INT, "1"
+            COMMA, ","
+            INT, "2"
+            RBRACKET, "]"
+            SEMICOLON, ";"
             EOF, (char 0).ToString()
         ]
 

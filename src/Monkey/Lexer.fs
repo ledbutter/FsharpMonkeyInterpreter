@@ -134,6 +134,8 @@ module Lexer =
                         let newPos, stringValue = readString oneCharPosIncrement
                         let stringToken = newToken stringValue STRING
                         (newPos, stringToken)
+                    | '[' -> (oneCharPosIncrement, partialToken LBRACKET)
+                    | ']' -> (oneCharPosIncrement, partialToken RBRACKET)
                     | c when c = emptyChar ->
                         (oneCharPosIncrement, partialToken EOF)
                     | _ -> 

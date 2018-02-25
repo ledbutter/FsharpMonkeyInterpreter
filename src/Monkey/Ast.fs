@@ -213,6 +213,23 @@ module Ast =
         override x.ToString() =
             x.Token.Literal
 
+    type ArrayLiteral =
+        {
+            Token: Token
+            Elements: Expression list
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            let elementValues = 
+                x.Elements
+                |> Seq.map(fun s -> s.ToString())
+                |> fun x -> x |> String.concat ", "
+
+            sprintf "[%s]" elementValues
+
     // dummy types
     // todo: figure out a way to get rid of this
     type EmptyStatement = 

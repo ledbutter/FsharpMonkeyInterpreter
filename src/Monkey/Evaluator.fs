@@ -54,12 +54,28 @@ module Evaluator =
             else
                 true
 
-        
-
         let isError (obj:Object) =
             obj.Type() = Object.ObjectTypes.ERROR_OBJ
 
+        let (|HasError|_|) (obj:Object list) =
+            match obj with
+            | x::xs when isError x && List.isEmpty xs ->
+                Some(x)
+            | _ ->
+                None
+
         let rec evalRec (node:Node) (currentEnv:Environment) : (Object*Environment) =
+
+            let rec evalExpressions expressions results env' =
+                match expressions with
+                | [] ->
+                    results, env'
+                | x::xs ->
+                    let evaluated, env'' = evalRec x env'
+                    if isError evaluated then
+                        [evaluated], env''
+                    else
+                        evalExpressions xs (evaluated::results) env''
 
             let rec evalProgram (unevaluatedStatements : Statement List) (results : Object List) programEnv =
                 match unevaluatedStatements with
@@ -238,24 +254,13 @@ module Evaluator =
                 if isError funcObject then
                     funcObject, env
                 else
-                    let rec evalExpressions expressions results env' =
-                        match expressions with
-                        | [] ->
-                            results, env'
-                        | x::xs ->
-                            let evaluated, env'' = evalRec x env'
-                            if isError evaluated then
-                                [evaluated], env''
-                            else
-                                evalExpressions xs (evaluated::results) env''
                     let args, env = evalExpressions ce.Arguments [] currentEnv
                     match funcObject with
                     | :? Function as fn ->
                         match args with
-                        | x::xs when isError x && List.isEmpty xs ->
-                            x, env
+                        | HasError e ->
+                            e, env
                         | _ ->
-                            //let func = funcObject :?> Function
                             let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
                             for i in 0..fn.Parameters.Length-1 do
                                 let argValue = args.[i]
@@ -276,6 +281,13 @@ module Evaluator =
                         errorMessage |> newError, env
             | :? StringLiteral as sl ->
                 {String.Value = sl.Value} :> Object, currentEnv
+            | :? ArrayLiteral as al ->
+                let elements, env = evalExpressions al.Elements [] currentEnv
+                match elements with
+                | HasError e ->
+                    e, env
+                | _ ->
+                    {Array.Elements = List.rev elements} :> Object, currentEnv
             | _ -> 
                 NULL, currentEnv
 

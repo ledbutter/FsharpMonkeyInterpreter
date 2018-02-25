@@ -230,6 +230,19 @@ module Ast =
 
             sprintf "[%s]" elementValues
 
+    type IndexExpression =
+        {
+            Token: Token
+            Left: Expression
+            Index: Expression
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            sprintf "(%s[%s])" (x.Left.ToString()) (x.Index.ToString())
+
     // dummy types
     // todo: figure out a way to get rid of this
     type EmptyStatement = 

@@ -15,6 +15,7 @@ module Object =
         let FUNCTION_OBJ = "FUNCTION" |> ObjectType
         let STRING_OBJ = "STRING" |> ObjectType
         let BUILTIN_OBJ = "BUILTIN" |> ObjectType
+        let ARRAY_OBJ = "ARRAY" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -128,4 +129,19 @@ module Object =
                 sprintf "builtin function"
             member __.Type() =
                 ObjectTypes.BUILTIN_OBJ
+
+    type Array =
+        {
+            Elements: Object list
+        }
+        interface Object with
+            member x.Inspect() =
+                let parameterValues = 
+                    x.Elements
+                    |> Seq.map(fun s -> s.Inspect())
+                    |> fun x -> x |> String.concat ", "
+
+                sprintf "[%s]" parameterValues
+            member __.Type() =
+                ObjectTypes.ARRAY_OBJ
     

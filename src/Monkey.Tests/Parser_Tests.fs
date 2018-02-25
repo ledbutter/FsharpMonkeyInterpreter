@@ -162,6 +162,8 @@ module Parser_Tests =
     [<TestCase("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)")>]
     [<TestCase("(5 + 5) * 2", "((5 + 5) * 2)")>]
     [<TestCase("a + add(b * c) + d", "((a + add((b * c))) + d)")>]
+    [<TestCase("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)")>]
+    [<TestCase("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))")>]
     let testOperatorPrecedenceParsing input expectedResult =
         let parserResults = input |> generateResults
         match parserResults with
@@ -298,3 +300,17 @@ module Parser_Tests =
             assertIntegerLiteral (arrayLiteral.Elements.[0] :?> IntegerLiteral) 1L
             assertInfixExpression (arrayLiteral.Elements.[1]) "2" "*" "2"
             assertInfixExpression (arrayLiteral.Elements.[2]) "3" "+" "3"
+
+    [<Test>]
+    let testParsingIndexExpression() =
+        let input = "myArray[1 + 1]"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let indexExpression = statement.Expression :?> IndexExpression
+            Assert.AreEqual("myArray", indexExpression.Left.TokenLiteral())
+            assertInfixExpression indexExpression.Index "1" "+" "1"

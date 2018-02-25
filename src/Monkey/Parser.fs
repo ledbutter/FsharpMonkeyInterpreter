@@ -15,7 +15,7 @@ module Parser =
                 | ParsedExpression of Expression * Token List
                 | ExpressionErrors of string List
 
-    type OperatorPrecedence = Lowest = 1 | Equals = 2 | LessGreater = 3 | Sum = 4 | Product = 5 | Prefix = 6 | Call = 7
+    type OperatorPrecedence = Lowest = 1 | Equals = 2 | LessGreater = 3 | Sum = 4 | Product = 5 | Prefix = 6 | Call = 7 | Index = 8
 
     let parseProgram tokens =
 
@@ -27,7 +27,8 @@ module Parser =
                                 MINUS, OperatorPrecedence.Sum;
                                 SLASH, OperatorPrecedence.Product;
                                 ASTERISK, OperatorPrecedence.Product;
-                                LPAREN, OperatorPrecedence.Call]
+                                LPAREN, OperatorPrecedence.Call;
+                                LBRACKET, OperatorPrecedence.Index;]
 
         let getPrecedence token =
             let found, p = precedences.TryGetValue token.Type
@@ -71,7 +72,6 @@ module Parser =
                     ExpressionErrors([errorMessage])
 
             let parseStringLiteral currentToken remainingTokens _ =
-                //let stringVal = currentToken.Literal
                 let stringLiteral = {StringLiteral.Token = currentToken; Value = currentToken.Literal} :> Expression
                 ParsedExpression(stringLiteral, remainingTokens)
 
@@ -260,7 +260,16 @@ module Parser =
                 | _ ->
                     ExpressionErrors(errors)
                 
-            
+            let parseIndexExpression left currentToken remainingTokens parseNext = 
+                let indexResult = parseNext OperatorPrecedence.Lowest (List.head remainingTokens) (List.tail remainingTokens)
+                match indexResult with
+                | ParsedExpression(index, remainingAfterIndex) ->
+                    let indexExpression = {IndexExpression.Token = currentToken; Left = left; Index = index} :> Expression
+                    // do a tail to skip over trailing ]
+                    ParsedExpression(indexExpression, (List.tail remainingAfterIndex))
+                | _ ->
+                    indexResult
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
@@ -283,7 +292,8 @@ module Parser =
                                                 NOT_EQ, parseInfixExpression;
                                                 LT, parseInfixExpression;
                                                 GT, parseInfixExpression;
-                                                LPAREN, parseCallExpression;]
+                                                LPAREN, parseCallExpression;
+                                                LBRACKET, parseIndexExpression;]
 
             // this parseExpression algorithm is an example of Pratt parsing
             let rec parseExpression precedence currentToken remainingTokens =

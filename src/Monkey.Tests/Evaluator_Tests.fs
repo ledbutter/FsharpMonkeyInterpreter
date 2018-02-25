@@ -7,6 +7,7 @@ open Monkey.Object
 open Monkey.Evaluator
 
 module Evaluator_Tests =
+    open Monkey.Ast
 
     let assertErrors (errors:string list) =
         sprintf "Parser had %i errors" errors.Length |> ignore
@@ -57,7 +58,7 @@ module Evaluator_Tests =
             e |> assertErrors
 
     let assertBooleanObject (object:Object) expected =
-        let booleanObject = object :?> Boolean
+        let booleanObject = object :?> Monkey.Object.Boolean
         Assert.AreEqual(expected, booleanObject.Value)
 
     [<TestCase("true", true)>]
@@ -294,5 +295,23 @@ module Evaluator_Tests =
                 | _ ->
                     let errorMessage = sprintf "Expected error, got %A" evaluated
                     Assert.Fail(errorMessage)
+        | Errors e ->
+            e |> assertErrors
+
+    [<Test>]
+    let testArrayLiterals() =
+        let input = "[1, 2 * 2, 3 + 3]"
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match evaluated with
+            | :? Array as a ->
+                Assert.AreEqual(3, a.Elements.Length)
+                assertIntegerObject a.Elements.[0] 1L
+                assertIntegerObject a.Elements.[1] 4L
+                assertIntegerObject a.Elements.[2] 6L
+            | _ ->
+                Assert.Fail(sprintf "Expected array literal, got %A" evaluated)
         | Errors e ->
             e |> assertErrors

@@ -315,3 +315,30 @@ module Evaluator_Tests =
                 Assert.Fail(sprintf "Expected array literal, got %A" evaluated)
         | Errors e ->
             e |> assertErrors
+
+    
+    let arrayIndexExpressionTestCases() =
+        seq {
+            yield new TestCaseData("[1, 2, 3][0]", Some(1L))
+            yield new TestCaseData("[1, 2, 3][1]", Some(2L))
+            yield new TestCaseData("[1, 2, 3][2]", Some(3L))
+            yield new TestCaseData("let myArray = [1, 2, 3]; myArray[2]", Some(3L))
+            yield new TestCaseData("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2]", Some(6L))
+            yield new TestCaseData("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", Some(2L))
+            yield new TestCaseData("[1, 2, 3][3]", None)
+            yield new TestCaseData("[1, 2, 3][-1]", None)
+        }
+    
+    [<TestCaseSource("arrayIndexExpressionTestCases")>]
+    let testArrayIndexExpressions input (expected: int64 option) =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match expected with
+            | Some i ->
+                assertIntegerObject evaluated i
+            | None ->
+                assertNullObject evaluated
+        | Errors e ->
+            e |> assertErrors

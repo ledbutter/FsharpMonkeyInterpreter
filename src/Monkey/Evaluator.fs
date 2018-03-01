@@ -288,6 +288,25 @@ module Evaluator =
                     e, env
                 | _ ->
                     {Array.Elements = List.rev elements} :> Object, currentEnv
+            | :? IndexExpression as ie ->
+                let left, env = evalRec ie.Left currentEnv
+                if isError left then
+                    left, env
+                else
+                    let index, env = evalRec ie.Index env
+                    if isError index then
+                        index, env
+                    else
+                        match left, index with
+                        | (:? Array as arr), (:? Integer as i) ->
+                            let idx = (int)i.Value
+                            if idx < 0 || idx >= arr.Elements.Length then
+                                NULL, env
+                            else
+                                arr.Elements.[idx], env
+                        | _, _ ->
+                            let errorMsg = sprintf "index operator not supported: %s" (unwrapObjectType left)
+                            errorMsg |> newError, currentEnv
             | _ -> 
                 NULL, currentEnv
 

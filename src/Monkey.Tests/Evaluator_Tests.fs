@@ -268,15 +268,27 @@ module Evaluator_Tests =
         | Errors e ->
             e |> assertErrors
 
-    type IntOrString = I of int | S of string
+    type IntOrString = I of int | S of string | A of int[]
 
     let builtInFunctionTestCases() =
         seq {
-            yield new TestCaseData(@"len("""")", I 0)
-            yield new TestCaseData(@"len(""four"")", I 4)
-            yield new TestCaseData(@"len(""hello world"")", I 11)
-            yield new TestCaseData(@"len(1)", S @"argument to ""len"" not supported, got INTEGER")
-            yield new TestCaseData(@"len(""one"", ""two"")", S "wrong number of arguments. got=2, want=1")
+            yield new TestCaseData(@"len("""")", Some(I 0))
+            yield new TestCaseData(@"len(""four"")", Some(I 4))
+            yield new TestCaseData(@"len(""hello world"")", Some(I 11))
+            yield new TestCaseData(@"len(1)", Some(S @"argument to ""len"" not supported, got INTEGER"))
+            yield new TestCaseData(@"len(""one"", ""two"")", Some(S "wrong number of arguments. got=2, want=1"))
+            yield new TestCaseData("len([1, 2, 3])", Some(I 3))
+            yield new TestCaseData("len([])", Some(I 0))
+            yield new TestCaseData("first([1, 2, 3])", Some(I 1))
+            yield new TestCaseData("first([])", None)
+            yield new TestCaseData("first(1)", Some(S @"argument to ""first"" must be ARRAY, got INTEGER"))
+            yield new TestCaseData("last([1, 2, 3])", Some(I 3))
+            yield new TestCaseData("last([])", None)
+            yield new TestCaseData("last(1)", Some(S @"argument to ""last"" must be ARRAY, got INTEGER"))
+            yield new TestCaseData("rest([1, 2, 3])", Some(A [|2; 3|]))
+            yield new TestCaseData("rest([])", None)
+            yield new TestCaseData("push([], 1)", Some(A [|1|]))
+            yield new TestCaseData("push(1, 1)", Some(S @"argument to ""push"" must be ARRAY, got INTEGER"))
         }
 
     [<TestCaseSource("builtInFunctionTestCases")>]
@@ -286,15 +298,24 @@ module Evaluator_Tests =
         | Program p -> 
             let evaluated = p |> evaluateProgram
             match expected with
-            | I i ->
-                assertIntegerObject evaluated i
-            | S s ->
-                match evaluated with
-                | :? Monkey.Object.Error as e ->
-                    Assert.AreEqual(s, e.Message)
-                | _ ->
-                    let errorMessage = sprintf "Expected error, got %A" evaluated
-                    Assert.Fail(errorMessage)
+            | Some e ->
+                match e with
+                | I i ->
+                    assertIntegerObject evaluated i
+                | S s ->
+                    match evaluated with
+                    | :? Monkey.Object.Error as e ->
+                        Assert.AreEqual(s, e.Message)
+                    | _ ->
+                        let errorMessage = sprintf "Expected error, got %A" evaluated
+                        Assert.Fail(errorMessage)
+                | A a ->
+                    let arr = evaluated :?> Array
+                    Assert.AreEqual(a.Length, arr.Elements.Length)
+                    for i in 0..a.Length - 1 do
+                        assertIntegerObject arr.Elements.[i] a.[i]
+            | None ->
+                assertNullObject evaluated
         | Errors e ->
             e |> assertErrors
 

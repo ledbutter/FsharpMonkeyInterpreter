@@ -27,7 +27,9 @@ module Evaluator =
             | SingleElementArray e ->
                 match e with
                 | :? String as s ->
-                    {Integer.Value = (int64)(s.Value.Length)} :> Object
+                    {Integer.Value = int64(s.Value.Length)} :> Object
+                | :? Array as arr ->
+                    {Integer.Value = int64(arr.Elements.Length)} :> Object
                 | _ ->
                     let errorMsg = sprintf @"argument to ""len"" not supported, got %s" (e |> unwrapObjectType)
                     errorMsg |> newError
@@ -35,7 +37,77 @@ module Evaluator =
                 let errorMsg = sprintf "wrong number of arguments. got=%i, want=1" args.Length
                 errorMsg |> newError
 
-        let builtIns = dict [ "len", {BuiltIn.Fn = len}; ]
+        let first (args: Object list) =
+            match args with
+            | SingleElementArray e ->
+                match e with 
+                | :? Array as arr ->
+                    match arr.Elements with
+                    | x::_ -> 
+                        x
+                    | _ ->
+                        NULL
+                | _ ->
+                    let errorMsg = sprintf @"argument to ""first"" must be ARRAY, got %s" ( e |> unwrapObjectType)
+                    errorMsg |> newError
+            | _ ->
+                let errorMsg = sprintf "wrong number of arguments. got=%i, want=1" args.Length
+                errorMsg |> newError
+
+        let last (args: Object list) =
+            match args with
+            | SingleElementArray e ->
+                match e with 
+                | :? Array as arr ->
+                    match arr.Elements with
+                    | _::xs -> 
+                        xs.[xs.Length-1]
+                    | _ ->
+                        NULL
+                | _ ->
+                    let errorMsg = sprintf @"argument to ""last"" must be ARRAY, got %s" ( e |> unwrapObjectType)
+                    errorMsg |> newError
+            | _ ->
+                let errorMsg = sprintf "wrong number of arguments. got=%i, want=1" args.Length
+                errorMsg |> newError
+
+        let rest (args: Object list) =
+            match args with
+            | SingleElementArray e ->
+                match e with
+                | :? Array as arr ->
+                    match arr.Elements with
+                    | _::xs ->
+                        {Array.Elements = xs} :> Object
+                    | _ ->
+                        NULL
+                | _ ->
+                    let errorMsg = sprintf @"argument to ""rest"" must be ARRAY, got %s" ( e |> unwrapObjectType)
+                    errorMsg |> newError
+            | _ ->
+                let errorMsg = sprintf "wrong number of arguments. got=%i, want=1" args.Length
+                errorMsg |> newError
+
+        let push (args: Object list) =
+            match args with
+            | x::xs when (List.length xs) = 1 ->
+                match x with
+                | :? Array as arr ->
+                    let newElements = (List.head xs)::arr.Elements
+                    {Array.Elements = newElements} :> Object
+                | _ ->
+                    let errorMsg = sprintf @"argument to ""push"" must be ARRAY, got %s" ( x |> unwrapObjectType)
+                    errorMsg |> newError
+            | _ ->
+                let errorMsg = sprintf "wrong number of arguments. got=%i, want=2" args.Length
+                errorMsg |> newError
+
+
+        let builtIns = dict [ "len", {BuiltIn.Fn = len};
+                              "first", {BuiltIn.Fn = first};
+                              "last", {BuiltIn.Fn = last};
+                              "rest", {BuiltIn.Fn = rest};
+                              "push", {BuiltIn.Fn = push};]
 
 
         let boolToBooleanObject boolVal =
@@ -69,7 +141,7 @@ module Evaluator =
             let rec evalExpressions expressions results env' =
                 match expressions with
                 | [] ->
-                    results, env'
+                    (List.rev results), env'
                 | x::xs ->
                     let evaluated, env'' = evalRec x env'
                     if isError evaluated then
@@ -287,7 +359,7 @@ module Evaluator =
                 | HasError e ->
                     e, env
                 | _ ->
-                    {Array.Elements = List.rev elements} :> Object, currentEnv
+                    {Array.Elements = elements} :> Object, currentEnv
             | :? IndexExpression as ie ->
                 let left, env = evalRec ie.Left currentEnv
                 if isError left then
@@ -299,7 +371,7 @@ module Evaluator =
                     else
                         match left, index with
                         | (:? Array as arr), (:? Integer as i) ->
-                            let idx = (int)i.Value
+                            let idx = int32(i.Value)
                             if idx < 0 || idx >= arr.Elements.Length then
                                 NULL, env
                             else

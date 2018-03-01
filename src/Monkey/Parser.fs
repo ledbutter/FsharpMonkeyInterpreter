@@ -220,8 +220,8 @@ module Parser =
                         (List.rev expressions, remainingTokens', [])
 
                 match remainingTokens with
-                | x::_ when x.Type = endTokenType ->
-                    ([], [], ["Somehow started out with next token matching end"])
+                | x::xs when x.Type = endTokenType ->
+                    ([], xs, [])
                 | x::xs ->
                     let firstExpressionResult = parse OperatorPrecedence.Lowest x xs
                     match firstExpressionResult with
@@ -233,6 +233,8 @@ module Parser =
                             match newRemaining with
                             | x::xs when x.Type = endTokenType ->
                                 (expressions, xs, [])
+                            | [] ->
+                                (expressions, [], [])
                             | _ ->
                                 let errorMsg = sprintf "Did not end on expected end token type %A instead on %A" endTokenType (List.head newRemaining)
                                 ([], [], [errorMsg])

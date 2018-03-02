@@ -272,6 +272,9 @@ module Parser =
                 | _ ->
                     indexResult
 
+            let parseHashLiteral currentToken remainingTokens parseNext =
+
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;

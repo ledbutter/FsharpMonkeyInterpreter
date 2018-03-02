@@ -50,6 +50,8 @@ module Token =
     let COMMA = ","
     [<Literal>]
     let SEMICOLON = ";"
+    [<Literal>]
+    let COLON = ":"
 
     [<Literal>]
     let LPAREN = "("

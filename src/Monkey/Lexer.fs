@@ -136,6 +136,7 @@ module Lexer =
                         (newPos, stringToken)
                     | '[' -> (oneCharPosIncrement, partialToken LBRACKET)
                     | ']' -> (oneCharPosIncrement, partialToken RBRACKET)
+                    | ':' -> (oneCharPosIncrement, partialToken COLON)
                     | c when c = emptyChar ->
                         (oneCharPosIncrement, partialToken EOF)
                     | _ -> 

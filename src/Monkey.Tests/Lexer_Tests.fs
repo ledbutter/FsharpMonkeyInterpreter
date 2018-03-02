@@ -5,6 +5,7 @@ open Monkey.Token
 open Monkey.Lexer
 
 module Lexer_Tests =
+    open System
 
     [<Test>]
     let testNextTokenAndReadChar() =
@@ -30,6 +31,7 @@ module Lexer_Tests =
             ""foobar""
             ""foo bar""
             [1, 2];
+            {""foo"": ""bar""}
             "
 
         let expectedResults = [
@@ -114,6 +116,11 @@ module Lexer_Tests =
             INT, "2"
             RBRACKET, "]"
             SEMICOLON, ";"
+            LBRACE, "{"
+            STRING, "foo"
+            COLON, ":"
+            STRING, "bar"
+            RBRACE, "}"
             EOF, (char 0).ToString()
         ]
 

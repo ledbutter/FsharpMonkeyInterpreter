@@ -314,3 +314,69 @@ module Parser_Tests =
             let indexExpression = statement.Expression :?> IndexExpression
             Assert.AreEqual("myArray", indexExpression.Left.TokenLiteral())
             assertInfixExpression indexExpression.Index "1" "+" "1"
+
+    [<Test>]
+    let testParsingHashLiteralsStringKeys() =
+        let input = @"{""one"": 1, ""two"": 2, ""three"": 3}"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let hash = statement.Expression :?> HashLiteral
+            Assert.AreEqual(3, hash.Pairs.Count)
+            let expectedValues = [
+                "one", 1L
+                "two", 2L
+                "three", 3L
+            ]
+
+            let findExpectedValue lit t = fst t = lit.ToString()
+
+            for kvp in hash.Pairs do
+                let literal = kvp.Key :?> StringLiteral
+                let expectedValue = List.find (findExpectedValue literal) expectedValues
+                assertIntegerLiteral (kvp.Value :?> IntegerLiteral) (snd expectedValue)
+
+    [<Test>]
+    let testParsingEmptyHashLiteral() =
+        let input = "{}"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let hash = statement.Expression :?> HashLiteral
+            Assert.AreEqual(0, hash.Pairs.Count)
+
+    let assertHashLiteralExpression left op right (exp:Expression) =
+        let infixExpression = exp :?> InfixExpression
+        Assert.AreEqual(left, infixExpression.Left.TokenLiteral(), "left")
+        Assert.AreEqual(op, infixExpression.Operator, "operator")
+        Assert.AreEqual(right, infixExpression.Right.TokenLiteral(), "right")
+
+    [<Test>]
+    let testParsingHashLiteralsWIthExpressions() =
+        let input = @"{""one"": 0 + 1, ""two"": 10 - 8, ""threee"": 15/5}"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.[0] :?> ExpressionStatement
+            let hash = statement.Expression :?> HashLiteral
+            Assert.AreEqual(3, hash.Pairs.Count)
+
+            let tests = dict[ "one", assertHashLiteralExpression "0" "+" "1";
+                              "two", assertHashLiteralExpression "10" "-" "8";
+                              "three", assertHashLiteralExpression "15" "/" "5";]
+            
+            for kvp in hash.Pairs do
+                let literal = kvp.Key :?> StringLiteral
+                let testFunc = tests.[(literal.ToString())]
+                testFunc kvp.Value

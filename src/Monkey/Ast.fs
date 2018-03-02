@@ -243,6 +243,23 @@ module Ast =
         override x.ToString() =
             sprintf "(%s[%s])" (x.Left.ToString()) (x.Index.ToString())
 
+    type HashLiteral =
+        {
+            Token: Token
+            Pairs: System.Collections.Generic.Dictionary<Expression, Expression>
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            let pairValues =
+                x.Pairs
+                |> Seq.map(fun kvp -> kvp.Key.ToString() + ":" + kvp.Value.ToString())
+                |> fun x -> x |> String.concat ", "
+
+            sprintf "{%s}" pairValues
+
     // dummy types
     // todo: figure out a way to get rid of this
     type EmptyStatement = 

@@ -57,6 +57,7 @@
     <Compile Include="Parser_Tests.fs" />
     <Compile Include="Ast_Tests.fs" />
     <Compile Include="Evaluator_Tests.fs" />
+    <Compile Include="Object_Test.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

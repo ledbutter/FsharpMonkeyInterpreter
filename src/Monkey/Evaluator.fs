@@ -9,6 +9,11 @@ module Evaluator =
     let FALSE = {Object.Boolean.Value = false} :> Object
     let NULL = Null() :> Object
 
+    type HashOutput =
+        | Success of System.Collections.Generic.Dictionary<HashKey, HashPair>
+        | Error of Object
+        | BombOut of Object
+
     let eval node : Object =
 
         let newError errorMessage =
@@ -379,6 +384,40 @@ module Evaluator =
                         | _, _ ->
                             let errorMsg = sprintf "index operator not supported: %s" (unwrapObjectType left)
                             errorMsg |> newError, currentEnv
+            | :? HashLiteral as h ->
+                let parseHash() =
+                    let pairs = new System.Collections.Generic.Dictionary<HashKey, HashPair>()
+                    let bombOuts = new System.Collections.Generic.List<Object>()
+                    let errors = new System.Collections.Generic.List<Object>()
+                    for kvp in h.Pairs do
+                        let key, env = evalRec kvp.Key currentEnv
+                        if isError key then
+                            bombOuts.Add(key)
+                        else
+                            match key with
+                            | :? Hashable as hsh ->
+                                let value, env = evalRec kvp.Value env
+                                if isError value then
+                                    bombOuts.Add(value)
+                                else
+                                    let hashed = hsh.HashKey()
+                                    pairs.Add(hashed, {HashPair.Key = key; Value = value})
+                            | _ ->
+                                let errorMsg = sprintf "unusable as hash key: %s" (unwrapObjectType key)
+                                let error = errorMsg |> newError
+                                errors.Add(error)
+                    pairs, bombOuts, errors
+
+                let pairs, bombOuts, errors = parseHash()
+                match errors.Count with
+                | 0 ->
+                    match bombOuts.Count with
+                    | 0 ->
+                        {Hash.Pairs = pairs} :> Object, currentEnv
+                    | _ ->
+                        bombOuts.[0], currentEnv
+                | _ ->
+                    errors.[0], currentEnv
             | _ -> 
                 NULL, currentEnv
 

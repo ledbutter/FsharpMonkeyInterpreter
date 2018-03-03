@@ -363,3 +363,36 @@ module Evaluator_Tests =
                 assertNullObject evaluated
         | Errors e ->
             e |> assertErrors
+
+    [<Test>]
+    let testHashLiterals() =
+        let input = @"let two = ""two"";
+        {
+            ""one: 10 - 9,
+            two: 1 + 1,
+            ""thr"" + ""ee"": 6/2,
+            4: 4,
+            true: 5,
+            false: 6
+        }"
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match evaluated with
+            | :? Hash as h ->
+                let expected = dict [ ({String.Value = "one"} :> Hashable).HashKey(), 1L;
+                                      ({String.Value = "two"} :> Hashable).HashKey(), 2L;
+                                      ({String.Value = "three"} :> Hashable).HashKey(), 3L;
+                                      ({Integer.Value = 4L} :> Hashable).HashKey(), 4L;
+                                      ({Monkey.Object.Boolean.Value = true} :> Hashable).HashKey(), 5L;
+                                      ({Monkey.Object.Boolean.Value = false} :> Hashable).HashKey(), 6L;]
+                Assert.AreEqual(expected.Count, h.Pairs.Count)
+                for kvp in expected do
+                    let found, pair = h.Pairs.TryGetValue(kvp.Key)
+                    Assert.IsTrue(found)
+                    assertIntegerObject pair.Value kvp.Value
+            | _ -> 
+                Assert.Fail(sprintf "Expected a hash, but got a %A" evaluated)
+        | Errors e ->
+            e |> assertErrors

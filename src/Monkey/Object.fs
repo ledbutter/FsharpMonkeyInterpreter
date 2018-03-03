@@ -16,30 +16,72 @@ module Object =
         let STRING_OBJ = "STRING" |> ObjectType
         let BUILTIN_OBJ = "BUILTIN" |> ObjectType
         let ARRAY_OBJ = "ARRAY" |> ObjectType
+        let HASH_OBJ = "HASH" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
         abstract member Inspect: unit -> string
 
+    type HashKey =
+        {
+            Type: ObjectType
+            Value: int64
+        }
+
+    type Hashable =
+        inherit Object
+        abstract member HashKey: unit -> HashKey
+
+    type HashPair =
+        {
+            Key: Object
+            Value: Object
+        }
+
+    type Hash =
+        {
+            Pairs: System.Collections.Generic.Dictionary<HashKey, HashPair>
+        }
+        interface Object with
+            member this.Inspect() =
+                let pairValues =
+                    this.Pairs
+                    |> Seq.map(fun kvp -> (kvp.Value.Key.Inspect()) + ":" + (kvp.Value.Value.Inspect()))
+                    |> fun x -> x |> String.concat ", "
+                
+                sprintf "{%s}" pairValues
+            
+            member __.Type() =
+                ObjectTypes.HASH_OBJ
+
     type Integer = 
         { 
             Value: int64 
         }
-        interface Object with
+        interface Hashable with
             member this.Inspect() =
                 sprintf "%d" this.Value
             member __.Type() =
                 ObjectTypes.INTEGER_OBJ
+            member this.HashKey() =
+                {HashKey.Type = ObjectTypes.INTEGER_OBJ; Value = this.Value}
 
     type Boolean =
         {
             Value: bool
         }
-        interface Object with
+        interface Hashable with
             member this.Inspect() =
                 sprintf "%b" this.Value
             member __.Type() =
                 ObjectTypes.BOOLEAN_OBJ
+            member this.HashKey() =
+                let hashValue = 
+                    match this.Value with
+                    | true -> 1L
+                    | false -> 0L
+
+                {HashKey.Type = ObjectTypes.BOOLEAN_OBJ; Value = hashValue}
 
     type Null =
         interface Object with
@@ -114,11 +156,13 @@ module Object =
         { 
             Value: string 
         }
-        interface Object with
+        interface Hashable with
             member this.Inspect() =
                 sprintf "%s" this.Value
             member __.Type() =
                 ObjectTypes.STRING_OBJ
+            member this.HashKey() =
+                {HashKey.Type = ObjectTypes.STRING_OBJ; Value = int64((this.Value.GetHashCode()))}
 
     type BuiltIn = 
         {

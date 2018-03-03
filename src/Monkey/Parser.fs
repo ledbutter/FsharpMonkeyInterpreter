@@ -273,7 +273,42 @@ module Parser =
                     indexResult
 
             let parseHashLiteral currentToken remainingTokens parseNext =
-
+                let rec parseHashLiteralPairs (remainingTokens': Token list) (pairs: System.Collections.Generic.Dictionary<Expression, Expression>) =
+                    match ((List.head remainingTokens').Type) with
+                    | RBRACE ->
+                        pairs, List.tail remainingTokens', []
+                    | _ ->
+                        let keyResult = parseNext OperatorPrecedence.Lowest (List.head remainingTokens') (List.tail remainingTokens')
+                        match keyResult with
+                        | ParsedExpression(key, remainingAfterKey) ->
+                            match ((List.head remainingAfterKey).Type) with
+                            | COLON ->
+                                let valueResult = parseNext OperatorPrecedence.Lowest (remainingAfterKey.[1]) (remainingAfterKey.[2..])
+                                match valueResult with
+                                | ParsedExpression(value, remainingAfterValue) ->
+                                    pairs.Add(key, value)
+                                    let nextToken = List.head remainingAfterValue
+                                    match nextToken.Type with
+                                    | COMMA ->
+                                        parseHashLiteralPairs (List.tail remainingAfterValue) pairs
+                                    | RBRACE ->
+                                        pairs, (List.tail remainingAfterValue), []
+                                    | _ ->
+                                        new System.Collections.Generic.Dictionary<Expression, Expression>(), remainingAfterValue, ["Unexpected last token in hash"]
+                                | ExpressionErrors e ->
+                                    new System.Collections.Generic.Dictionary<Expression, Expression>(), remainingAfterKey, e
+                            | _ ->
+                                let errorMsg = sprintf "Expected colon in hash literal, but was %A" (List.head remainingAfterKey)
+                                new System.Collections.Generic.Dictionary<Expression, Expression>(), remainingAfterKey, [errorMsg]
+                        | ExpressionErrors e ->
+                            new System.Collections.Generic.Dictionary<Expression, Expression>(), remainingTokens', e
+                let pairs, remaining, errors = parseHashLiteralPairs remainingTokens (new System.Collections.Generic.Dictionary<Expression, Expression>())
+                match errors with
+                | [] ->
+                    let hashLiteral = {HashLiteral.Token = currentToken; Pairs = pairs} :> Expression
+                    ParsedExpression(hashLiteral, remaining)
+                | _ ->
+                    ExpressionErrors(errors)
 
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
@@ -287,7 +322,8 @@ module Parser =
                                                 IF, parseIfExpression;
                                                 FUNCTION, parseFunctionLiteral;
                                                 STRING, parseStringLiteral;
-                                                LBRACKET, parseArrayLiteral;]
+                                                LBRACKET, parseArrayLiteral;
+                                                LBRACE, parseHashLiteral]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

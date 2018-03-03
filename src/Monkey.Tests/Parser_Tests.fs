@@ -360,8 +360,8 @@ module Parser_Tests =
         Assert.AreEqual(right, infixExpression.Right.TokenLiteral(), "right")
 
     [<Test>]
-    let testParsingHashLiteralsWIthExpressions() =
-        let input = @"{""one"": 0 + 1, ""two"": 10 - 8, ""threee"": 15/5}"
+    let testParsingHashLiteralsWithExpressions() =
+        let input = @"{""one"": 0 + 1, ""two"": 10 - 8, ""three"": 15/5}"
         let parserResults = input |> generateResults
         match parserResults with
         | Errors e ->

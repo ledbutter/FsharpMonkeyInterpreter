@@ -368,7 +368,7 @@ module Evaluator_Tests =
     let testHashLiterals() =
         let input = @"let two = ""two"";
         {
-            ""one: 10 - 9,
+            ""one"": 10 - 9,
             two: 1 + 1,
             ""thr"" + ""ee"": 6/2,
             4: 4,

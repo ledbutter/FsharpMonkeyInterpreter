@@ -107,12 +107,23 @@ module Evaluator =
                 let errorMsg = sprintf "wrong number of arguments. got=%i, want=2" args.Length
                 errorMsg |> newError
 
+        let puts (args: Object list) =
+            let rec putsRec (args': Object list) =
+                match args' with
+                | [] ->
+                    NULL
+                | x::xs ->
+                    printfn "%s" (x.Inspect())
+                    putsRec xs
+            putsRec args
+
 
         let builtIns = dict [ "len", {BuiltIn.Fn = len};
                               "first", {BuiltIn.Fn = first};
                               "last", {BuiltIn.Fn = last};
                               "rest", {BuiltIn.Fn = rest};
-                              "push", {BuiltIn.Fn = push};]
+                              "push", {BuiltIn.Fn = push};
+                              "puts", {BuiltIn.Fn = puts};]
 
 
         let boolToBooleanObject boolVal =
@@ -381,10 +392,22 @@ module Evaluator =
                                 NULL, env
                             else
                                 arr.Elements.[idx], env
+                        | (:? Hash as h), _ ->
+                            match index with
+                            | :? Hashable as key ->
+                                let found, pair = h.Pairs.TryGetValue(key.HashKey())
+                                if found then
+                                    pair.Value, currentEnv
+                                else
+                                    NULL, currentEnv
+                            | _ ->
+                                let errorMsg = sprintf "unusable as hash key: %s" (unwrapObjectType index)
+                                errorMsg |> newError, currentEnv
                         | _, _ ->
                             let errorMsg = sprintf "index operator not supported: %s" (unwrapObjectType left)
                             errorMsg |> newError, currentEnv
             | :? HashLiteral as h ->
+                // todo: fix this, really ugly
                 let parseHash() =
                     let pairs = new System.Collections.Generic.Dictionary<HashKey, HashPair>()
                     let bombOuts = new System.Collections.Generic.List<Object>()

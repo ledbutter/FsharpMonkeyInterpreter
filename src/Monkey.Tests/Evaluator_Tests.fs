@@ -171,6 +171,7 @@ module Evaluator_Tests =
                  }", "unknown operator: BOOLEAN + BOOLEAN")>]
     [<TestCase("foobar", "identifier not found: foobar")>]
     [<TestCase(@"""Hello"" - ""World""", "unknown operator: STRING - STRING")>]
+    [<TestCase(@"{""name"": ""Monkey""}[fn(x) { x }];", "unusable as hash key: FUNCTION")>]
     let testErrorHandling input expected =
         let programResult = generateProgram input
         match programResult with
@@ -394,5 +395,25 @@ module Evaluator_Tests =
                     assertIntegerObject pair.Value kvp.Value
             | _ -> 
                 Assert.Fail(sprintf "Expected a hash, but got a %A" evaluated)
+        | Errors e ->
+            e |> assertErrors
+
+    let hashIndexExpressionTestCases() =
+        seq {
+            yield new TestCaseData(@"{""foo"": 5}[""foo""]", Some(5L))
+            yield new TestCaseData(@"{""foo"": 5}[""bar""]", None)
+        }
+
+    [<TestCaseSource("hashIndexExpressionTestCases")>]
+    let testHashIndexExpressions input (expected: int64 option) =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match expected with
+            | Some i ->
+                assertIntegerObject evaluated i
+            | None ->
+                assertNullObject evaluated
         | Errors e ->
             e |> assertErrors

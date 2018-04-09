@@ -434,3 +434,20 @@ module Evaluator_Tests =
                   Assert.Fail(sprintf "Expected a quote, but got a %A" evaluated)  
         | Errors e ->
             e |> assertErrors
+
+    [<TestCase("quote(unquote(4))", "4")>]
+    [<TestCase("quote(unquote(4 + 4))", "8")>]
+    [<TestCase("quote(8 + unquote(4 + 4))", "(8 + 8)")>]
+    [<TestCase("quote(unquote(4 + 4) + 8)", "(8 + 8)")>]
+    let testQuoteUnquote input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match evaluated with
+            | :? Quote as q ->
+                Assert.AreEqual(expected, q.Node.ToString())
+            | _ ->
+                  Assert.Fail(sprintf "Expected a quote, but got a %A" evaluated)  
+        | Errors e ->
+            e |> assertErrors

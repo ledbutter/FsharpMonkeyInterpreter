@@ -260,6 +260,27 @@ module Ast =
 
             sprintf "{%s}" pairValues
 
+
+    // todo: this is the worst stuff i've written yet
+    let rec modify (node:Node) (modifier:Node->Node) : Node =
+
+        let modifiedNode = match node with
+        | :? Program as p ->
+            let modifiedStatements = new System.Collections.Generic.List<Statement>(p.Statements.Length)
+
+            for s in p.Statements do
+                let newMod = (modify s modifier) :?> Statement
+                modifiedStatements.Add(newMod)
+
+            {p with Statements = List.ofSeq modifiedStatements} :> Node
+        | :? ExpressionStatement as es ->
+            let modExpression = (modify es.Expression modifier) :?> Expression
+            {es with Expression = modExpression} :> Node
+        | _ ->
+            node
+        
+        modifier modifiedNode
+
     // dummy types
     // todo: figure out a way to get rid of this
     type EmptyStatement = 
@@ -268,3 +289,5 @@ module Ast =
                 ""
         member this.TokenLiteral() = (this :> Statement).TokenLiteral()
         new() = {}
+
+    

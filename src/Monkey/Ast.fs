@@ -282,6 +282,10 @@ module Ast =
         | :? PrefixExpression as pe ->
             let newRight = (modify pe.Right modifier) :?> Expression
             {pe with Right = newRight} :> Node
+        | :? IndexExpression as ie ->
+            let newLeft = (modify ie.Left modifier) :?> Expression
+            let newIndex = (modify ie.Index modifier) :?> Expression
+            {ie with Left = newLeft; Index = newIndex} :> Node
         | _ ->
             node
         

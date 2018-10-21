@@ -83,3 +83,16 @@ module Ast_Tests =
         | _ ->
             Assert.Fail("Wrong type, fool")
 
+    [<Test>]
+    let testModifyIndex() =
+        let input = {IndexExpression.Left = one(); Index = one(); Token = dummyToken}
+        let expected = {IndexExpression.Left = two(); Index = two(); Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? IndexExpression as actualIndex ->
+            Assert.AreEqual(expected.Left, actualIndex.Left)
+            Assert.AreEqual(expected.Index, actualIndex.Index)
+        | _ ->
+            Assert.Fail("Wrong type, fool")

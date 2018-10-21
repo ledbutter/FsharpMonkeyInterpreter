@@ -69,3 +69,17 @@ module Ast_Tests =
             Assert.AreEqual(expected.Left, actualInfix.Left)
         | _ ->
             Assert.Fail("Wrong type, fool")
+
+    [<Test>]
+    let testModifyPrefix() =
+        let input = {PrefixExpression.Operator = "-"; Right = one(); Token = dummyToken}
+        let expected = {PrefixExpression.Operator = "-"; Right = two(); Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? PrefixExpression as actualPrefix ->
+            Assert.AreEqual(expected.Right, actualPrefix.Right)
+        | _ ->
+            Assert.Fail("Wrong type, fool")
+

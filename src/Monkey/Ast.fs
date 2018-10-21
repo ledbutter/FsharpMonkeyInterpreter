@@ -260,12 +260,11 @@ module Ast =
 
             sprintf "{%s}" pairValues
 
-
-    // todo: this is the worst stuff i've written yet
     let rec modify (node:Node) (modifier:Node->Node) : Node =
 
         let modifiedNode = match node with
         | :? Program as p ->
+            // todo: this is the worst stuff i've written yet
             let modifiedStatements = new System.Collections.Generic.List<Statement>(p.Statements.Length)
 
             for s in p.Statements do
@@ -280,6 +279,9 @@ module Ast =
             let newLeft = (modify ie.Left modifier) :?> Expression
             let newRight = (modify ie.Right modifier) :?> Expression
             {ie with Left = newLeft; Right = newRight} :> Node
+        | :? PrefixExpression as pe ->
+            let newRight = (modify pe.Right modifier) :?> Expression
+            {pe with Right = newRight} :> Node
         | _ ->
             node
         

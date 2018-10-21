@@ -132,12 +132,12 @@ module Evaluator =
                 else
                     FALSE
         
-        let isTruthy object =
-            if object = NULL then
+        let isTruthy obj =
+            if obj = NULL then
                 false
-            else if object = TRUE then
+            else if obj = TRUE then
                 true
-            else if object = FALSE then
+            else if obj = FALSE then
                 false
             else
                 true

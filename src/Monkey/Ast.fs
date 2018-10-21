@@ -276,6 +276,10 @@ module Ast =
         | :? ExpressionStatement as es ->
             let modExpression = (modify es.Expression modifier) :?> Expression
             {es with Expression = modExpression} :> Node
+        | :? InfixExpression as ie ->
+            let newLeft = (modify ie.Left modifier) :?> Expression
+            let newRight = (modify ie.Right modifier) :?> Expression
+            {ie with Left = newLeft; Right = newRight} :> Node
         | _ ->
             node
         

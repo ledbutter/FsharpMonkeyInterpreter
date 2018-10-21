@@ -314,6 +314,17 @@ module Ast =
                 modifiedParameters.Add(newMod)
             let modifiedBody = (modify fl.Body modifier) :?> BlockStatement
             {fl with Parameters = List.ofSeq modifiedParameters; Body = modifiedBody} :> Node
+        | :? ArrayLiteral as al ->
+            // todo: this is the worst stuff i've written yet
+            let modifiedExpressions = new System.Collections.Generic.List<Expression>(al.Elements.Length)
+            for i in [0..al.Elements.Length-1] do
+                let el = al.Elements.[i]
+                let newMod = (modify el modifier) :?> Expression
+                modifiedExpressions.Add(newMod)
+//            for e in al.Elements do
+//                let newMod = (modify e modifier) :?> Expression
+//                modifiedExpressions.Add(newMod)
+            {al with Elements = List.ofSeq modifiedExpressions} :> Node
         | _ ->
             node
         

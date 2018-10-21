@@ -154,3 +154,20 @@ module Ast_Tests =
             Assert.AreEqual(expectedStatements, fl.Body)
         | _ ->
             Assert.Fail("Wrong type, fool")
+
+    [<Test>]
+    let testArrayLiteral() =
+        let input = {ArrayLiteral.Elements = [one(); two()]; Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? ArrayLiteral as al ->
+            Assert.AreEqual(two(), al.Elements.[0])
+            Assert.AreEqual(one(), al.Elements.[1])
+//            let firstVal = al.Elements.[0] :?> IntegerLiteral
+//            Assert.AreEqual(2, firstVal.Value)
+//            let lastValue = al.Elements.[1] :?> IntegerLiteral
+//            Assert.AreEqual(1, lastValue.Value)
+        | _ ->
+            Assert.Fail("Wrong type, fool")

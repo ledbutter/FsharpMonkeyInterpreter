@@ -139,3 +139,18 @@ module Ast_Tests =
             Assert.AreEqual(expected.Value, ls.Value)
         | _ ->
             Assert.Fail("Wrong type, fool")
+
+    [<Test>]
+    let testFunctionLiteral() =
+        let inputStatements = {BlockStatement.Statements = [{ExpressionStatement.Expression = one(); Token = dummyToken}]; Token = dummyToken}
+        let expectedStatements = {BlockStatement.Statements = [{ExpressionStatement.Expression = two(); Token = dummyToken}]; Token = dummyToken}
+        let input = {FunctionLiteral.Parameters = []; Body = inputStatements; Token = dummyToken}
+        let expected = {FunctionLiteral.Parameters = []; Body = expectedStatements; Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? FunctionLiteral as fl ->
+            Assert.AreEqual(expectedStatements, fl.Body)
+        | _ ->
+            Assert.Fail("Wrong type, fool")

@@ -306,6 +306,14 @@ module Ast =
         | :? LetStatement as ls ->
             let newValue = (modify ls.Value modifier) :?> Expression
             {ls with Value = newValue} :> Node
+        | :? FunctionLiteral as fl ->
+            // todo: this is the worst stuff i've written yet
+            let modifiedParameters = new System.Collections.Generic.List<Identifier>(fl.Parameters.Length)
+            for p in fl.Parameters do
+                let newMod = (modify p modifier) :?> Identifier
+                modifiedParameters.Add(newMod)
+            let modifiedBody = (modify fl.Body modifier) :?> BlockStatement
+            {fl with Parameters = List.ofSeq modifiedParameters; Body = modifiedBody} :> Node
         | _ ->
             node
         

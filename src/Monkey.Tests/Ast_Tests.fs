@@ -96,3 +96,22 @@ module Ast_Tests =
             Assert.AreEqual(expected.Index, actualIndex.Index)
         | _ ->
             Assert.Fail("Wrong type, fool")
+
+    [<Test>]
+    let testModifyIf() =
+        let inputStatements = {BlockStatement.Statements = [{ExpressionStatement.Expression = one(); Token = dummyToken}]; Token = dummyToken}
+        let input = {IfExpression.Condition = one(); Consequence = inputStatements; Alternative = inputStatements; Token = dummyToken}
+        let expectedStatements = {BlockStatement.Statements = [{ExpressionStatement.Expression = two(); Token = dummyToken}]; Token = dummyToken}
+        let expected = {IfExpression.Condition = two(); Consequence = expectedStatements; Alternative = expectedStatements; Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? IfExpression as ifExp ->
+            Assert.AreEqual(expected.Condition, ifExp.Condition)
+            Assert.AreEqual(expectedStatements, ifExp.Consequence)
+            Assert.AreEqual(expectedStatements, ifExp.Alternative)
+        | _ ->
+            Assert.Fail("Wrong type, fool")
+
+        

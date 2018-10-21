@@ -286,6 +286,20 @@ module Ast =
             let newLeft = (modify ie.Left modifier) :?> Expression
             let newIndex = (modify ie.Index modifier) :?> Expression
             {ie with Left = newLeft; Index = newIndex} :> Node
+        | :? IfExpression as ie ->
+            let newCondition = (modify ie.Condition modifier) :?> Expression
+            let newConsequence = (modify ie.Consequence modifier) :?> BlockStatement
+            let newAlternative = match ie.Alternative.Statements with
+            | [] -> ie.Alternative// :?> Expression
+            | _ -> (modify ie.Alternative modifier) :?> BlockStatement
+            {ie with Condition = newCondition; Consequence = newConsequence; Alternative = newAlternative} :> Node
+        | :? BlockStatement as bs ->
+            // todo: this is the worst stuff i've written yet
+            let modifiedStatements = new System.Collections.Generic.List<Statement>(bs.Statements.Length)
+            for s in bs.Statements do
+                let newMod = (modify s modifier) :?> Statement
+                modifiedStatements.Add(newMod)
+            {bs with Statements = List.ofSeq modifiedStatements} :> Node
         | _ ->
             node
         

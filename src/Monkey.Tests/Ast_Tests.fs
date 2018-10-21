@@ -114,4 +114,28 @@ module Ast_Tests =
         | _ ->
             Assert.Fail("Wrong type, fool")
 
-        
+    [<Test>]
+    let testReturn() =
+        let input = {ReturnStatement.ReturnValue = one(); Token = dummyToken}
+        let expected = {ReturnStatement.ReturnValue = two(); Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? ReturnStatement as ret ->
+            Assert.AreEqual(expected.ReturnValue, ret.ReturnValue)
+        | _ ->
+            Assert.Fail("Wrong type, fool")
+
+    [<Test>]
+    let testLet() =
+        let input = {LetStatement.Value = one(); Token = dummyToken; Name = {Identifier.Token = dummyToken; Value = "Input"}}
+        let expected = {LetStatement.Value = two(); Token = dummyToken; Name = {Identifier.Token = dummyToken; Value = "Expected"}}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? LetStatement as ls ->
+            Assert.AreEqual(expected.Value, ls.Value)
+        | _ ->
+            Assert.Fail("Wrong type, fool")

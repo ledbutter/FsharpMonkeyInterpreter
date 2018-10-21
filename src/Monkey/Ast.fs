@@ -300,6 +300,12 @@ module Ast =
                 let newMod = (modify s modifier) :?> Statement
                 modifiedStatements.Add(newMod)
             {bs with Statements = List.ofSeq modifiedStatements} :> Node
+        | :? ReturnStatement as rs ->
+            let newValue = (modify rs.ReturnValue modifier) :?> Expression
+            {rs with ReturnValue = newValue} :> Node
+        | :? LetStatement as ls ->
+            let newValue = (modify ls.Value modifier) :?> Expression
+            {ls with Value = newValue} :> Node
         | _ ->
             node
         

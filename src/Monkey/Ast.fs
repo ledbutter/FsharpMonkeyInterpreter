@@ -262,15 +262,12 @@ module Ast =
 
     let rec modify (node:Node) (modifier:Node->Node) : Node =
 
+        let modifyNodeCollection (nodes:list<'a>) =
+            nodes |> List.map (fun n -> (modify n modifier) :?> 'a)
+
         let modifiedNode = match node with
         | :? Program as p ->
-            // todo: this is the worst stuff i've written yet
-            let modifiedStatements = new System.Collections.Generic.List<Statement>(p.Statements.Length)
-
-            for s in p.Statements do
-                let newMod = (modify s modifier) :?> Statement
-                modifiedStatements.Add(newMod)
-
+            let modifiedStatements = p.Statements |> modifyNodeCollection
             {p with Statements = List.ofSeq modifiedStatements} :> Node
         | :? ExpressionStatement as es ->
             let modExpression = (modify es.Expression modifier) :?> Expression
@@ -294,11 +291,7 @@ module Ast =
             | _ -> (modify ie.Alternative modifier) :?> BlockStatement
             {ie with Condition = newCondition; Consequence = newConsequence; Alternative = newAlternative} :> Node
         | :? BlockStatement as bs ->
-            // todo: this is the worst stuff i've written yet
-            let modifiedStatements = new System.Collections.Generic.List<Statement>(bs.Statements.Length)
-            for s in bs.Statements do
-                let newMod = (modify s modifier) :?> Statement
-                modifiedStatements.Add(newMod)
+            let modifiedStatements = bs.Statements |> modifyNodeCollection
             {bs with Statements = List.ofSeq modifiedStatements} :> Node
         | :? ReturnStatement as rs ->
             let newValue = (modify rs.ReturnValue modifier) :?> Expression
@@ -307,23 +300,11 @@ module Ast =
             let newValue = (modify ls.Value modifier) :?> Expression
             {ls with Value = newValue} :> Node
         | :? FunctionLiteral as fl ->
-            // todo: this is the worst stuff i've written yet
-            let modifiedParameters = new System.Collections.Generic.List<Identifier>(fl.Parameters.Length)
-            for p in fl.Parameters do
-                let newMod = (modify p modifier) :?> Identifier
-                modifiedParameters.Add(newMod)
+            let modifiedParameters = fl.Parameters |> modifyNodeCollection
             let modifiedBody = (modify fl.Body modifier) :?> BlockStatement
             {fl with Parameters = List.ofSeq modifiedParameters; Body = modifiedBody} :> Node
         | :? ArrayLiteral as al ->
-            // todo: this is the worst stuff i've written yet
-            let modifiedExpressions = new System.Collections.Generic.List<Expression>(al.Elements.Length)
-            for i in [0..al.Elements.Length-1] do
-                let el = al.Elements.[i]
-                let newMod = (modify el modifier) :?> Expression
-                modifiedExpressions.Add(newMod)
-//            for e in al.Elements do
-//                let newMod = (modify e modifier) :?> Expression
-//                modifiedExpressions.Add(newMod)
+            let modifiedExpressions = al.Elements |> modifyNodeCollection
             {al with Elements = List.ofSeq modifiedExpressions} :> Node
         | _ ->
             node

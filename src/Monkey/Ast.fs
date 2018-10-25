@@ -290,7 +290,7 @@ module Ast =
             let newCondition = (modify ie.Condition modifier) :?> Expression
             let newConsequence = (modify ie.Consequence modifier) :?> BlockStatement
             let newAlternative = match ie.Alternative.Statements with
-            | [] -> ie.Alternative// :?> Expression
+            | [] -> ie.Alternative
             | _ -> (modify ie.Alternative modifier) :?> BlockStatement
             {ie with Condition = newCondition; Consequence = newConsequence; Alternative = newAlternative} :> Node
         | :? BlockStatement as bs ->

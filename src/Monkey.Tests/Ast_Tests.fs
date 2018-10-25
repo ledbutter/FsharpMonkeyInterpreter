@@ -29,7 +29,7 @@ module Ast_Tests =
             if il.Value = 1L then
                 {il with Value = 2L} :> Node
             else
-                node
+                {il with Value = 1L} :> Node
         | _ ->
             node
    
@@ -163,11 +163,8 @@ module Ast_Tests =
 
         match result with
         | :? ArrayLiteral as al ->
+            Assert.AreEqual(2, al.Elements.Length)
             Assert.AreEqual(two(), al.Elements.[0])
             Assert.AreEqual(one(), al.Elements.[1])
-//            let firstVal = al.Elements.[0] :?> IntegerLiteral
-//            Assert.AreEqual(2, firstVal.Value)
-//            let lastValue = al.Elements.[1] :?> IntegerLiteral
-//            Assert.AreEqual(1, lastValue.Value)
         | _ ->
             Assert.Fail("Wrong type, fool")

@@ -338,8 +338,43 @@ module Evaluator =
             | :? FunctionLiteral as fl ->
                 {Function.Body = fl.Body; Parameters = fl.Parameters; Env = currentEnv} :> Object, currentEnv
             | :? CallExpression as ce ->
+
+                let modifier (node:Node) =
+                    match node with
+                    | :? CallExpression as ce when ce.Function.TokenLiteral() <> "unquote" ->
+                        node, currentEnv
+                    | :? CallExpression as ce when ce.Arguments.Length <> 1 ->
+                        node, currentEnv
+                    | :? CallExpression as ce ->
+                        let convertObjectToAstNode (obj:Object) =
+                            match obj with
+                            | :? Integer as i ->
+                                let token = {Token.Type = Token.INT; Token.Literal = (sprintf "%i" i.Value)}
+                                {IntegerLiteral.Token = token; Value = i.Value} :> Node
+                            | :? Boolean as b ->
+                                let token = 
+                                    if b.Value then
+                                        {Token.Type = Token.TRUE; Token.Literal = "true"}
+                                    else
+                                        {Token.Type = Token.FALSE; Token.Literal = "false"}
+                                {Ast.Boolean.Token = token; Ast.Boolean.Value = b.Value} :> Node
+                            | :? Quote as q ->
+                                q.Node
+                            | _ ->
+                                EmptyStatement() :> Node
+                                    
+                        let unquoted, newEnv = evalRec ce.Arguments.Head currentEnv
+                        let unquotedNode = unquoted |> convertObjectToAstNode
+                        unquotedNode, newEnv
+                    | _ ->
+                        node, currentEnv
+
+                let evalUnquoteCalls quoted =
+                    modify quoted modifier
+
                 if ce.Function.TokenLiteral() = "quote" then
-                    {Quote.Node = ce.Arguments.[0]} :> Object, currentEnv
+                    let node = evalUnquoteCalls ce
+                    {Quote.Node = node} :> Object, currentEnv
                 else
                     let funcObject, env = evalRec ce.Function currentEnv
                     if isError funcObject then

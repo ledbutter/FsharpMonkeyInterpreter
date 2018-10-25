@@ -439,7 +439,6 @@ module Evaluator_Tests =
     [<TestCase("quote(unquote(4 + 4))", "8")>]
     [<TestCase("quote(8 + unquote(4 + 4))", "(8 + 8)")>]
     [<TestCase("quote(unquote(4 + 4) + 8)", "(8 + 8)")>]
-    [<Ignore("Wait until modify is done")>]
     let testQuoteUnquote input expected =
         let programResult = generateProgram input
         match programResult with

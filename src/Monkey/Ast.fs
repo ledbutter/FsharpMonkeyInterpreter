@@ -246,7 +246,7 @@ module Ast =
     type HashLiteral =
         {
             Token: Token
-            Pairs: System.Collections.Generic.Dictionary<Expression, Expression>
+            Pairs: System.Collections.Generic.IDictionary<Expression, Expression>
         }
         interface Expression with
             member this.TokenLiteral() =
@@ -306,6 +306,14 @@ module Ast =
         | :? ArrayLiteral as al ->
             let modifiedExpressions = al.Elements |> modifyNodeCollection
             {al with Elements = List.ofSeq modifiedExpressions} :> Node
+        | :? HashLiteral as hl ->
+            let modifiedPairs = 
+                hl.Pairs 
+                |> Seq.map (fun kvp -> ((modify kvp.Key modifier) :?> Expression), ((modify kvp.Value modifier) :?> Expression)) 
+                |> dict
+            {hl with Pairs = modifiedPairs} :> Node
+            //|> dict
+
         | _ ->
             node
         

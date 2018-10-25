@@ -168,3 +168,18 @@ module Ast_Tests =
             Assert.AreEqual(one(), al.Elements.[1])
         | _ ->
             Assert.Fail("Wrong type, fool")
+
+    [<Test>]
+    let testHashLiteral() =
+        let pairs = new System.Collections.Generic.Dictionary<Expression, Expression>()
+        pairs.Add(one(), one()) |> ignore
+        let input = {HashLiteral.Pairs = pairs; Token = dummyToken}
+
+        let result = modify input turnOneIntoTwo
+
+        match result with
+        | :? HashLiteral as hl ->
+            Assert.AreEqual(true, hl.Pairs
+            |> Seq.forall(fun kvp -> kvp.Key = two() && kvp.Value = two()))
+        | _ ->
+            Assert.Fail("Wrong type, fool")

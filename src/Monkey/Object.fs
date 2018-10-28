@@ -1,7 +1,6 @@
 ﻿namespace Monkey
 
 module Object =
-    open System.Collections.Generic
     open System
     open Ast
 
@@ -115,7 +114,7 @@ module Object =
 
     type Environment =
         {
-            Store: Dictionary<string, Object>
+            Store: System.Collections.Generic.Dictionary<string, Object>
             Outer: Environment option
         }
         member this.Get name =

@@ -2,6 +2,7 @@
 
 open Ast
 open Object
+open Modifier
 
 module Evaluator =
 
@@ -359,7 +360,7 @@ module Evaluator =
                                         {Token.Type = Token.FALSE; Token.Literal = "false"}
                                 {Ast.Boolean.Token = token; Ast.Boolean.Value = b.Value} :> Node
                             | :? Quote as q ->
-                                q.Node
+                                q.Node :> Node
                             | _ ->
                                 EmptyStatement() :> Node
                                     

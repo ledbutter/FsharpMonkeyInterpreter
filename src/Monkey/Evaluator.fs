@@ -360,7 +360,7 @@ module Evaluator =
                                         {Token.Type = Token.FALSE; Token.Literal = "false"}
                                 {Ast.Boolean.Token = token; Ast.Boolean.Value = b.Value} :> Node
                             | :? Quote as q ->
-                                q.Node :> Node
+                                q.Node
                             | _ ->
                                 EmptyStatement() :> Node
                                     
@@ -374,7 +374,7 @@ module Evaluator =
                     modify quoted env modifier
 
                 if ce.Function.TokenLiteral() = "quote" then
-                    let node, newEnv = evalUnquoteCalls ce currentEnv
+                    let node, newEnv = evalUnquoteCalls ce.Arguments.Head currentEnv
                     {Quote.Node = node} :> Object, newEnv
                 else
                     let funcObject, env = evalRec ce.Function currentEnv

@@ -340,12 +340,12 @@ module Evaluator =
                 {Function.Body = fl.Body; Parameters = fl.Parameters; Env = currentEnv} :> Object, currentEnv
             | :? CallExpression as ce ->
 
-                let modifier (node:Node) =
+                let modifier (node:Node) env =
                     match node with
                     | :? CallExpression as ce when ce.Function.TokenLiteral() <> "unquote" ->
-                        node, currentEnv
+                        node, env
                     | :? CallExpression as ce when ce.Arguments.Length <> 1 ->
-                        node, currentEnv
+                        node, env
                     | :? CallExpression as ce ->
                         let convertObjectToAstNode (obj:Object) =
                             match obj with
@@ -364,18 +364,18 @@ module Evaluator =
                             | _ ->
                                 EmptyStatement() :> Node
                                     
-                        let unquoted, newEnv = evalRec ce.Arguments.Head currentEnv
+                        let unquoted, newEnv = evalRec ce.Arguments.Head env
                         let unquotedNode = unquoted |> convertObjectToAstNode
                         unquotedNode, newEnv
                     | _ ->
-                        node, currentEnv
+                        node, env
 
-                let evalUnquoteCalls quoted =
-                    modify quoted modifier
+                let evalUnquoteCalls quoted env =
+                    modify quoted env modifier
 
                 if ce.Function.TokenLiteral() = "quote" then
-                    let node = evalUnquoteCalls ce
-                    {Quote.Node = node} :> Object, currentEnv
+                    let node, newEnv = evalUnquoteCalls ce currentEnv
+                    {Quote.Node = node} :> Object, newEnv
                 else
                     let funcObject, env = evalRec ce.Function currentEnv
                     if isError funcObject then

@@ -441,6 +441,10 @@ module Evaluator_Tests =
     [<TestCase("quote(unquote(4 + 4) + 8)", "(8 + 8)")>]
     [<TestCase("let foobar = 8; quote(foobar)", "foobar")>]
     [<TestCase("let foobar = 8; quote(unquote(foobar))", "8")>]
+    [<TestCase("quote(unquote(true))", "true")>]
+    [<TestCase("quote(unquote(true == false))", "false")>]
+    [<TestCase("quote(unquote(quote(4 + 4)))", "(4 + 4)")>]
+    [<TestCase("let q = quote(4 + 4); quote(unquote(4 + 4) + unquote(q))", "(8 + (4 + 4))")>]
     let testQuoteUnquote input expected =
         let programResult = generateProgram input
         match programResult with

@@ -81,8 +81,19 @@ module Token =
     let ELSE = "ELSE"
     [<Literal>]
     let RETURN = "RETURN"
+    [<Literal>]
+    let MACRO = "MACRO"
 
-    let private keywords = dict [ ("fn", FUNCTION); ("let", LET); ("true", TRUE); ("false", FALSE); ("if", IF); ("else", ELSE); ("return", RETURN) ]
+    let private keywords = 
+        dict [ 
+            ("fn", FUNCTION); 
+            ("let", LET); 
+            ("true", TRUE); 
+            ("false", FALSE); 
+            ("if", IF); 
+            ("else", ELSE); 
+            ("return", RETURN); 
+            ("macro", MACRO); ]
 
     let lookupIdent ident =
         let found, value = keywords.TryGetValue ident

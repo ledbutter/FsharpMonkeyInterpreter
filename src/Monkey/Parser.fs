@@ -310,6 +310,25 @@ module Parser =
                 | _ ->
                     ExpressionErrors(errors)
 
+            let parseMacroLiteral currentToken remainingTokens _ =
+                let peekResult = expectPeek (List.head remainingTokens) LPAREN
+                match peekResult with
+                | [] ->
+                    let (parameters, remainingTokens') = parseFunctionParameters (List.tail remainingTokens)
+                    match remainingTokens' with
+                    | [] -> ExpressionErrors(["No tokens for macro body!"])
+                    | x::_ when x.Type <> LBRACE -> ExpressionErrors(["Found token other then left brace for macro body!"])
+                    | _::xs ->
+                        let (body, finalRemaining, errors) = parseBlockStatement (List.head xs) (List.tail xs)
+                        match errors with
+                        | [] ->
+                            let macroLiteral = {MacroLiteral.Parameters = parameters; Token = currentToken; Body = body} :> Expression
+                            ParsedExpression(macroLiteral, finalRemaining)
+                        | _ -> ExpressionErrors(errors)
+                | errors -> 
+                    let errorMessage = combineStrings errors
+                    ExpressionErrors([errorMessage])
+
             // todo: there has to be a more elegant way of doing this:
             //      we are mapping strings to funcs
             let prefixParseFunctionMap = dict [ IDENT, parseIdentifier;
@@ -323,7 +342,8 @@ module Parser =
                                                 FUNCTION, parseFunctionLiteral;
                                                 STRING, parseStringLiteral;
                                                 LBRACKET, parseArrayLiteral;
-                                                LBRACE, parseHashLiteral]
+                                                LBRACE, parseHashLiteral;
+                                                MACRO, parseMacroLiteral;]
 
             let infixParseFunctionMap = dict [  PLUS, parseInfixExpression;
                                                 MINUS, parseInfixExpression;

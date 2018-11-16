@@ -260,6 +260,24 @@ module Ast =
 
             sprintf "{%s}" pairValues
 
+    type MacroLiteral =
+        {
+            Token: Token
+            Parameters: Identifier list
+            Body: BlockStatement
+        }
+        interface Expression with
+            member this.TokenLiteral() =
+                this.Token.Literal
+        member this.TokenLiteral() = (this :> Expression).TokenLiteral()
+        override x.ToString() =
+            let parameterValues = 
+                x.Parameters
+                |> Seq.map(fun s -> s.ToString())
+                |> fun x -> x |> String.concat ", "
+
+            sprintf "%s (%s) %s" (x.TokenLiteral()) parameterValues (x.Body.ToString())
+
     // dummy types
     // todo: figure out a way to get rid of this
     type EmptyStatement = 

@@ -380,3 +380,24 @@ module Parser_Tests =
                 let literal = kvp.Key :?> StringLiteral
                 let testFunc = tests.[(literal.ToString())]
                 testFunc kvp.Value
+
+    [<Test>]
+    let testMacroLiteralParsing() =
+        let input = @"macro(x, y) { x + y; }"
+        let parserResults = input |> generateResults
+        match parserResults with
+        | Errors e ->
+            e |> assertErrors
+        | Program p ->
+            Assert.AreEqual(1, p.Statements.Length, "Unexpected number of statements")
+            let statement = p.Statements.Head :?> ExpressionStatement
+            let macro = statement.Expression :?> MacroLiteral
+            Assert.AreEqual(2, macro.Parameters.Length, "Unexpected number of macro parameters")
+            let parameterOne = macro.Parameters.[0]
+            Assert.AreEqual("x", parameterOne.TokenLiteral())
+            let parameterTwo = macro.Parameters.[1]
+            Assert.AreEqual("y", parameterTwo.TokenLiteral())
+            Assert.AreEqual(1, macro.Body.Statements.Length)
+            let bodyStatement = macro.Body.Statements.Head :?> ExpressionStatement
+            assertInfixExpression bodyStatement.Expression "x" "+" "y"
+            

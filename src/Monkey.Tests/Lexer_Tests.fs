@@ -32,6 +32,7 @@ module Lexer_Tests =
             ""foo bar""
             [1, 2];
             {""foo"": ""bar""}
+            macro(x, y) { x + y; };
             "
 
         let expectedResults = [
@@ -121,6 +122,19 @@ module Lexer_Tests =
             COLON, ":"
             STRING, "bar"
             RBRACE, "}"
+            MACRO, "macro"
+            LPAREN, "("
+            IDENT, "x"
+            COMMA, ","
+            IDENT, "y"
+            RPAREN, ")"
+            LBRACE, "{"
+            IDENT, "x"
+            PLUS, "+"
+            IDENT, "y"
+            SEMICOLON, ";"
+            RBRACE, "}"
+            SEMICOLON, ";"
             EOF, (char 0).ToString()
         ]
 

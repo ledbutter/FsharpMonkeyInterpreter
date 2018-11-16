@@ -18,6 +18,7 @@ module Object =
         let ARRAY_OBJ = "ARRAY" |> ObjectType
         let HASH_OBJ = "HASH" |> ObjectType
         let QUOTE_OBJ = "QUOTE" |> ObjectType
+        let MACRO_OBJ = "MACRO" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -199,3 +200,21 @@ module Object =
                 sprintf "QUOTE(%s)" (x.Node.ToString())
             member __.Type() =
                 ObjectTypes.QUOTE_OBJ
+
+    type Macro =
+        {
+            Parameters: Identifier list
+            Body: BlockStatement
+            Env: Environment
+        }
+        interface Object with
+            member this.Inspect() =
+                let parameterValues = 
+                    this.Parameters
+                    |> Seq.map(fun s -> s.ToString())
+                    |> fun x -> x |> String.concat ", "
+                
+                sprintf "macro (%s) {%s %s %s}" parameterValues Environment.NewLine (this.Body.ToString()) Environment.NewLine
+
+            member __.Type() =
+                ObjectTypes.MACRO_OBJ

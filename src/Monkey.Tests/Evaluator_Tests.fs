@@ -457,3 +457,27 @@ module Evaluator_Tests =
                   Assert.Fail(sprintf "Expected a quote, but got a %A" evaluated)  
         | Errors e ->
             e |> assertErrors
+
+    [<Test>]
+    let testDefineMacros() =
+        let input = @"
+            let number = 1;
+            let function = fn(x, y) { x + y};
+            let mymacro = macro(x, y) { x + y };"
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let p', env = p |> defineMacros
+            Assert.AreEqual(2, p'.Statements.Length)
+            match env.Get("mymacro") with
+            | Some obj ->
+                match obj with
+                | :? Macro as m ->
+                    Assert.AreEqual(2, m.Parameters.Length)
+                    Assert.AreEqual("(x + y)", m.Body.ToString())
+                | _ ->
+                    Assert.Fail("Wrong type, fool!")
+            | None ->
+                Assert.Fail("Unable to find macro!")
+        | Errors e ->
+            e |> assertErrors

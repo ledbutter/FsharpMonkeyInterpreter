@@ -486,4 +486,40 @@ module Evaluator =
         let res, _ = evalRec node {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
         res
 
+    let defineMacros (program : Program) =
+
+        let findMacro (node : Statement) =
+            match node with
+            | :? LetStatement as ls ->
+                match ls.Value with
+                | :? MacroLiteral as ml ->
+                    Some(ml, ls.Name.Value)
+                | _ ->
+                    None
+            | _ ->
+                None
         
+        let addMacro statementValue (ml : MacroLiteral) (env : Environment) =
+            let macro = {Macro.Env = env; Body = ml.Body; Parameters = ml.Parameters}
+            env.Store.Add(statementValue, macro)
+            env
+
+        let rec evalProgramStatements originalStatements newStatements currentEnv =
+            match originalStatements with
+            | [] ->
+                (List.rev newStatements), currentEnv
+            | x::xs ->
+                // if a macro, add it to the environment and remove from statements
+                let macroResult = findMacro x
+                let newEnv, updatedNewStatements = 
+                    match macroResult with
+                    | Some(macro, name) ->
+                        addMacro name macro currentEnv, newStatements
+                    | None ->
+                        currentEnv, x::newStatements
+                evalProgramStatements xs updatedNewStatements newEnv
+
+        let env = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        let newProgramStatements, finalEnv = evalProgramStatements program.Statements [] env
+
+        {Program.Statements = newProgramStatements}, finalEnv

@@ -15,7 +15,7 @@ module Evaluator =
         | Error of Object
         | BombOut of Object
 
-    let eval node : Object =
+    let eval (startingEnv : Environment option) node : Object =
 
         let newError errorMessage =
             {Error.Message = errorMessage} :> Object
@@ -370,18 +370,18 @@ module Evaluator =
                     | _ ->
                         node, env
 
-                let evalUnquoteCalls quoted env =
-                    modify quoted env modifier
+                let evalUnquoteCalls quoted =
+                    modify quoted currentEnv modifier
 
                 if ce.Function.TokenLiteral() = "quote" then
-                    let node, newEnv = evalUnquoteCalls ce.Arguments.Head currentEnv
+                    let node, newEnv = evalUnquoteCalls ce.Arguments.Head
                     {Quote.Node = node} :> Object, newEnv
                 else
                     let funcObject, env = evalRec ce.Function currentEnv
                     if isError funcObject then
                         funcObject, env
                     else
-                        let args, env = evalExpressions ce.Arguments [] currentEnv
+                        let args, env = evalExpressions ce.Arguments [] env
                         match funcObject with
                         | :? Function as fn ->
                             match args with
@@ -483,7 +483,13 @@ module Evaluator =
             | _ -> 
                 NULL, currentEnv
 
-        let res, _ = evalRec node {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        let env' = 
+            match startingEnv with
+            | Some env ->
+                env
+            | None ->
+                {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        let res, _ = evalRec node env'
         res
 
     let defineMacros (program : Program) =
@@ -523,3 +529,60 @@ module Evaluator =
         let newProgramStatements, finalEnv = evalProgramStatements program.Statements [] env
 
         {Program.Statements = newProgramStatements}, finalEnv
+
+    let expandMacros program env =
+
+        let modifier (node : Node) (currentEnv : Environment) =
+
+            let findMacro (callExp : CallExpression) : (Macro option) =
+                match callExp.Function with
+                | :? Identifier as id ->
+                    match currentEnv.Get(id.Value) with
+                    | Some obj ->
+                        match obj with
+                        | :? Macro as m ->
+                            Some m
+                        | _ ->
+                            None
+                    | _ ->
+                        None
+                | _ ->
+                    None
+
+            let quoteArgs (callExp : CallExpression) =
+                
+                let rec quoteArgs' (args : Expression list) (quotedArgs : Quote list) =
+                    match args with
+                    | [] ->
+                        List.rev quotedArgs
+                    | x::xs ->
+                        let quotedArg = {Quote.Node = x}
+                        quoteArgs' xs (quotedArg::quotedArgs)
+
+                quoteArgs' callExp.Arguments []
+
+            let extendMacroEnv macro (args : Quote list) =
+                let extended = {Environment.Outer = Some(macro.Env); Store = new System.Collections.Generic.Dictionary<string, Object>()}
+
+                macro.Parameters |> List.iteri (fun i x -> extended.Set x.Value (args.[i]) |> ignore )
+
+                extended
+
+            match node with
+            | :? CallExpression as ce ->
+                match findMacro ce with
+                | Some macro ->
+                    let args = quoteArgs ce
+                    let evalEnv = extendMacroEnv macro args
+                    let evaluated = eval (Some(evalEnv)) macro.Body 
+                    match evaluated with
+                    | :? Quote as q ->
+                        q.Node, evalEnv
+                    | _ ->
+                        failwith("bad news bears")
+                | None ->
+                    node, env
+            | _ ->
+                node, env
+
+        modify program env modifier

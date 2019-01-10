@@ -5,9 +5,9 @@ open Monkey.Parser
 open Monkey.Lexer
 open Monkey.Object
 open Monkey.Evaluator
+open Monkey.Ast
 
 module Evaluator_Tests =
-    open Monkey.Ast
 
     let assertErrors (errors:string list) =
         sprintf "Parser had %i errors" errors.Length |> ignore
@@ -31,7 +31,7 @@ module Evaluator_Tests =
             Assert.Fail("Wrong object type")
 
     let evaluateProgram p =
-        eval p
+        eval None p
 
     [<TestCase("5", 5)>]
     [<TestCase("10", 10)>]
@@ -481,3 +481,15 @@ module Evaluator_Tests =
                 Assert.Fail("Unable to find macro!")
         | Errors e ->
             e |> assertErrors
+
+    [<TestCase("let infixExpression = macro() { quote(1 + 2); }; infixExpression();", "(1 + 2)")>]
+    [<TestCase("let reverse = macro(a, b) { quote(unquote(b) - unquote(a)); }; reverse(2 + 2, 10 - 5);", "(10 - 5) - (2 + 2)")>]
+    let testExpandMacros input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let p', env = p |> defineMacros
+            let expanded, _ = expandMacros p' env
+            Assert.AreEqual(expected, expanded.ToString())
+        | _ ->
+            Assert.Fail("Not a program!")

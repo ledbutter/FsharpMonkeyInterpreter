@@ -33,7 +33,7 @@ module Repl =
                 for i in 0..e.Length-1 do
                     output.Print "%A" e.[i]
             | Program p ->
-                let evaluated = eval p
+                let evaluated = eval None p
                 output.Print "%s" (evaluated.Inspect())
 
             start reader output    

@@ -1,8 +1,8 @@
 ﻿namespace Monkey
 
 module Object =
-    open System.Collections.Generic
     open System
+    open Ast
 
     type ObjectType = ObjectType of string
 
@@ -17,6 +17,8 @@ module Object =
         let BUILTIN_OBJ = "BUILTIN" |> ObjectType
         let ARRAY_OBJ = "ARRAY" |> ObjectType
         let HASH_OBJ = "HASH" |> ObjectType
+        let QUOTE_OBJ = "QUOTE" |> ObjectType
+        let MACRO_OBJ = "MACRO" |> ObjectType
 
     type Object =
         abstract member Type: unit -> ObjectType
@@ -113,7 +115,7 @@ module Object =
 
     type Environment =
         {
-            Store: Dictionary<string, Object>
+            Store: System.Collections.Generic.Dictionary<string, Object>
             Outer: Environment option
         }
         member this.Get name =
@@ -188,4 +190,31 @@ module Object =
                 sprintf "[%s]" parameterValues
             member __.Type() =
                 ObjectTypes.ARRAY_OBJ
-    
+
+    type Quote =
+        {
+            Node: Node
+        }
+        interface Object with
+            member x.Inspect() =
+                sprintf "QUOTE(%s)" (x.Node.ToString())
+            member __.Type() =
+                ObjectTypes.QUOTE_OBJ
+
+    type Macro =
+        {
+            Parameters: Identifier list
+            Body: BlockStatement
+            Env: Environment
+        }
+        interface Object with
+            member this.Inspect() =
+                let parameterValues = 
+                    this.Parameters
+                    |> Seq.map(fun s -> s.ToString())
+                    |> fun x -> x |> String.concat ", "
+                
+                sprintf "macro (%s) {%s %s %s}" parameterValues Environment.NewLine (this.Body.ToString()) Environment.NewLine
+
+            member __.Type() =
+                ObjectTypes.MACRO_OBJ

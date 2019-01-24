@@ -2,6 +2,7 @@
 
 open Ast
 open Object
+open Modifier
 
 module Evaluator =
 
@@ -14,7 +15,7 @@ module Evaluator =
         | Error of Object
         | BombOut of Object
 
-    let eval node : Object =
+    let eval (startingEnv : Environment option) node : Object =
 
         let newError errorMessage =
             {Error.Message = errorMessage} :> Object
@@ -132,12 +133,12 @@ module Evaluator =
                 else
                     FALSE
         
-        let isTruthy object =
-            if object = NULL then
+        let isTruthy obj =
+            if obj = NULL then
                 false
-            else if object = TRUE then
+            else if obj = TRUE then
                 true
-            else if object = FALSE then
+            else if obj = FALSE then
                 false
             else
                 true
@@ -338,35 +339,73 @@ module Evaluator =
             | :? FunctionLiteral as fl ->
                 {Function.Body = fl.Body; Parameters = fl.Parameters; Env = currentEnv} :> Object, currentEnv
             | :? CallExpression as ce ->
-                let funcObject, env = evalRec ce.Function currentEnv
-                if isError funcObject then
-                    funcObject, env
-                else
-                    let args, env = evalExpressions ce.Arguments [] currentEnv
-                    match funcObject with
-                    | :? Function as fn ->
-                        match args with
-                        | HasError e ->
-                            e, env
-                        | _ ->
-                            let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
-                            for i in 0..fn.Parameters.Length-1 do
-                                let argValue = args.[i]
-                                let param = fn.Parameters.[i]
-                                funcEnvironment.Set param.Value argValue |> ignore
-                        
-                            let evaluated, env = evalRec fn.Body funcEnvironment
-                            match evaluated with
-                            | :? ReturnValue as rv ->
-                                rv.Value, env
+
+                let modifier (node:Node) env =
+                    match node with
+                    | :? CallExpression as ce when ce.Function.TokenLiteral() <> "unquote" ->
+                        node, env
+                    | :? CallExpression as ce when ce.Arguments.Length <> 1 ->
+                        node, env
+                    | :? CallExpression as ce ->
+                        let convertObjectToAstNode (obj:Object) =
+                            match obj with
+                            | :? Integer as i ->
+                                let token = {Token.Type = Token.INT; Token.Literal = (sprintf "%i" i.Value)}
+                                {IntegerLiteral.Token = token; Value = i.Value} :> Node
+                            | :? Boolean as b ->
+                                let token = 
+                                    if b.Value then
+                                        {Token.Type = Token.TRUE; Token.Literal = "true"}
+                                    else
+                                        {Token.Type = Token.FALSE; Token.Literal = "false"}
+                                {Ast.Boolean.Token = token; Ast.Boolean.Value = b.Value} :> Node
+                            | :? Quote as q ->
+                                q.Node
                             | _ ->
-                                evaluated, env
-                    | :? BuiltIn as bn ->
-                        let evaluated = bn.Fn args
-                        evaluated, env
+                                EmptyStatement() :> Node
+                                    
+                        let unquoted, newEnv = evalRec ce.Arguments.Head env
+                        let unquotedNode = unquoted |> convertObjectToAstNode
+                        unquotedNode, newEnv
                     | _ ->
-                        let errorMessage = sprintf "not a function: %A" funcObject
-                        errorMessage |> newError, env
+                        node, env
+
+                let evalUnquoteCalls quoted =
+                    modify quoted currentEnv modifier
+
+                if ce.Function.TokenLiteral() = "quote" then
+                    let node, newEnv = evalUnquoteCalls ce.Arguments.Head
+                    {Quote.Node = node} :> Object, newEnv
+                else
+                    let funcObject, env = evalRec ce.Function currentEnv
+                    if isError funcObject then
+                        funcObject, env
+                    else
+                        let args, env = evalExpressions ce.Arguments [] env
+                        match funcObject with
+                        | :? Function as fn ->
+                            match args with
+                            | HasError e ->
+                                e, env
+                            | _ ->
+                                let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
+                                for i in 0..fn.Parameters.Length-1 do
+                                    let argValue = args.[i]
+                                    let param = fn.Parameters.[i]
+                                    funcEnvironment.Set param.Value argValue |> ignore
+                        
+                                let evaluated, env = evalRec fn.Body funcEnvironment
+                                match evaluated with
+                                | :? ReturnValue as rv ->
+                                    rv.Value, env
+                                | _ ->
+                                    evaluated, env
+                        | :? BuiltIn as bn ->
+                            let evaluated = bn.Fn args
+                            evaluated, env
+                        | _ ->
+                            let errorMessage = sprintf "not a function: %A" funcObject
+                            errorMessage |> newError, env
             | :? StringLiteral as sl ->
                 {String.Value = sl.Value} :> Object, currentEnv
             | :? ArrayLiteral as al ->
@@ -444,7 +483,106 @@ module Evaluator =
             | _ -> 
                 NULL, currentEnv
 
-        let res, _ = evalRec node {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        let env' = 
+            match startingEnv with
+            | Some env ->
+                env
+            | None ->
+                {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        let res, _ = evalRec node env'
         res
 
+    let defineMacros (program : Program) =
+
+        let findMacro (node : Statement) =
+            match node with
+            | :? LetStatement as ls ->
+                match ls.Value with
+                | :? MacroLiteral as ml ->
+                    Some(ml, ls.Name.Value)
+                | _ ->
+                    None
+            | _ ->
+                None
         
+        let addMacro statementValue (ml : MacroLiteral) (env : Environment) =
+            let macro = {Macro.Env = env; Body = ml.Body; Parameters = ml.Parameters}
+            env.Store.Add(statementValue, macro)
+            env
+
+        let rec evalProgramStatements originalStatements newStatements currentEnv =
+            match originalStatements with
+            | [] ->
+                (List.rev newStatements), currentEnv
+            | x::xs ->
+                // if a macro, add it to the environment and remove from statements
+                let macroResult = findMacro x
+                let newEnv, updatedNewStatements = 
+                    match macroResult with
+                    | Some(macro, name) ->
+                        addMacro name macro currentEnv, newStatements
+                    | None ->
+                        currentEnv, x::newStatements
+                evalProgramStatements xs updatedNewStatements newEnv
+
+        let env = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
+        let newProgramStatements, finalEnv = evalProgramStatements program.Statements [] env
+
+        {Program.Statements = newProgramStatements}, finalEnv
+
+    let expandMacros program env =
+
+        let modifier (node : Node) (currentEnv : Environment) =
+
+            let findMacro (callExp : CallExpression) : (Macro option) =
+                match callExp.Function with
+                | :? Identifier as id ->
+                    match currentEnv.Get(id.Value) with
+                    | Some obj ->
+                        match obj with
+                        | :? Macro as m ->
+                            Some m
+                        | _ ->
+                            None
+                    | _ ->
+                        None
+                | _ ->
+                    None
+
+            let quoteArgs (callExp : CallExpression) =
+                
+                let rec quoteArgs' (args : Expression list) (quotedArgs : Quote list) =
+                    match args with
+                    | [] ->
+                        List.rev quotedArgs
+                    | x::xs ->
+                        let quotedArg = {Quote.Node = x}
+                        quoteArgs' xs (quotedArg::quotedArgs)
+
+                quoteArgs' callExp.Arguments []
+
+            let extendMacroEnv macro (args : Quote list) =
+                let extended = {Environment.Outer = Some(macro.Env); Store = new System.Collections.Generic.Dictionary<string, Object>()}
+
+                macro.Parameters |> List.iteri (fun i x -> extended.Set x.Value (args.[i]) |> ignore )
+
+                extended
+
+            match node with
+            | :? CallExpression as ce ->
+                match findMacro ce with
+                | Some macro ->
+                    let args = quoteArgs ce
+                    let evalEnv = extendMacroEnv macro args
+                    let evaluated = eval (Some(evalEnv)) macro.Body 
+                    match evaluated with
+                    | :? Quote as q ->
+                        q.Node, evalEnv
+                    | _ ->
+                        failwith("bad news bears")
+                | None ->
+                    node, env
+            | _ ->
+                node, env
+
+        modify program env modifier

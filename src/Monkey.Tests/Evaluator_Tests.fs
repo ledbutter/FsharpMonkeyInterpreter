@@ -5,9 +5,9 @@ open Monkey.Parser
 open Monkey.Lexer
 open Monkey.Object
 open Monkey.Evaluator
+open Monkey.Ast
 
 module Evaluator_Tests =
-    open Monkey.Ast
 
     let assertErrors (errors:string list) =
         sprintf "Parser had %i errors" errors.Length |> ignore
@@ -20,18 +20,18 @@ module Evaluator_Tests =
         |> tokenizeInput
         |> parseProgram
 
-    let assertIntegerObject (object:Object) expected =
-        match object with
+    let assertIntegerObject (obj:Object) expected =
+        match obj with
         | :? Integer as i ->
             Assert.AreEqual(expected, i.Value)
         | :? Error as e ->
             Assert.Fail(e.Message)
         | _ ->
-            sprintf "Unexpected object %A" object |> ignore
+            sprintf "Unexpected object %A" obj |> ignore
             Assert.Fail("Wrong object type")
 
     let evaluateProgram p =
-        eval p
+        eval None p
 
     [<TestCase("5", 5)>]
     [<TestCase("10", 10)>]
@@ -57,8 +57,8 @@ module Evaluator_Tests =
         | Errors e ->
             e |> assertErrors
 
-    let assertBooleanObject (object:Object) expected =
-        let booleanObject = object :?> Monkey.Object.Boolean
+    let assertBooleanObject (obj:Object) expected =
+        let booleanObject = obj :?> Monkey.Object.Boolean
         Assert.AreEqual(expected, booleanObject.Value)
 
     [<TestCase("true", true)>]
@@ -116,12 +116,12 @@ module Evaluator_Tests =
             yield new TestCaseData("if (1 < 2) { 10 } else { 20 }", Some(10))
         } 
 
-    let assertNullObject (object:Object) =
-        match object with
+    let assertNullObject (obj:Object) =
+        match obj with
         | :? Null as __ ->
             Assert.Pass("Was null")
         | _ ->
-            Assert.Fail((sprintf "Was not null, was %A" object))
+            Assert.Fail((sprintf "Was not null, was %A" obj))
         
 
     [<TestCaseSource("ifElseExpressionTestCases")>]
@@ -269,7 +269,19 @@ module Evaluator_Tests =
         | Errors e ->
             e |> assertErrors
 
-    type IntOrString = I of int | S of string | A of int[]
+    [<Test>]
+    let testPuts() =
+        let programResult = generateProgram @"puts(""hello"", ""world!"")"
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match evaluated with
+            | :? Null as n -> Assert.Pass()
+            | _ -> Assert.Fail("Expected Null!")
+        | Errors e ->
+            e |> assertErrors
+
+    type IntOrStringOrNull = I of int | S of string | A of int[]
 
     let builtInFunctionTestCases() =
         seq {
@@ -417,3 +429,93 @@ module Evaluator_Tests =
                 assertNullObject evaluated
         | Errors e ->
             e |> assertErrors
+
+    [<TestCase("quote(5)", "5")>]
+    [<TestCase("quote(5 + 8)", "(5 + 8)")>]
+    [<TestCase("quote(foobar)", "foobar")>]
+    [<TestCase("quote(foobar + barfoo)", "(foobar + barfoo)")>]
+    let testQuote input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match evaluated with
+            | :? Quote as q ->
+                Assert.AreEqual(expected, q.Node.ToString())
+            | _ ->
+                  Assert.Fail(sprintf "Expected a quote, but got a %A" evaluated)  
+        | Errors e ->
+            e |> assertErrors
+
+    [<TestCase("quote(unquote(4))", "4")>]
+    [<TestCase("quote(unquote(4 + 4))", "8")>]
+    [<TestCase("quote(8 + unquote(4 + 4))", "(8 + 8)")>]
+    [<TestCase("quote(unquote(4 + 4) + 8)", "(8 + 8)")>]
+    [<TestCase("let foobar = 8; quote(foobar)", "foobar")>]
+    [<TestCase("let foobar = 8; quote(unquote(foobar))", "8")>]
+    [<TestCase("quote(unquote(true))", "true")>]
+    [<TestCase("quote(unquote(true == false))", "false")>]
+    [<TestCase("quote(unquote(quote(4 + 4)))", "(4 + 4)")>]
+    [<TestCase("let q = quote(4 + 4); quote(unquote(4 + 4) + unquote(q))", "(8 + (4 + 4))")>]
+    let testQuoteUnquote input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let evaluated = p |> evaluateProgram
+            match evaluated with
+            | :? Quote as q ->
+                Assert.AreEqual(expected, q.Node.ToString())
+            | _ ->
+                  Assert.Fail(sprintf "Expected a quote, but got a %A" evaluated)  
+        | Errors e ->
+            e |> assertErrors
+
+    [<Test>]
+    let testDefineMacros() =
+        let input = @"
+            let number = 1;
+            let function = fn(x, y) { x + y};
+            let mymacro = macro(x, y) { x + y };"
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let p', env = p |> defineMacros
+            Assert.AreEqual(2, p'.Statements.Length)
+            match env.Get("mymacro") with
+            | Some obj ->
+                match obj with
+                | :? Macro as m ->
+                    Assert.AreEqual(2, m.Parameters.Length)
+                    Assert.AreEqual("(x + y)", m.Body.ToString())
+                | _ ->
+                    Assert.Fail("Wrong type, fool!")
+            | None ->
+                Assert.Fail("Unable to find macro!")
+        | Errors e ->
+            e |> assertErrors
+
+    [<TestCase("let infixExpression = macro() { quote(1 + 2); }; infixExpression();", "(1 + 2)")>]
+    // question out to the author about his, he has the expected without the enclosing ()
+    [<TestCase("let reverse = macro(a, b) { quote(unquote(b) - unquote(a)); }; reverse(2 + 2, 10 - 5);", "((10 - 5) - (2 + 2))")>]
+    // this last one does not work because the current ToString() implementation does not preserve the "" for the parameters
+//    [<TestCase(@"
+//            let unless = macro(condition, consequence, alternative) {
+//                quote(if (!(unquote(condition))) {
+//                    unquote(consequence);
+//                } else {
+//                    unquote(alternative);
+//                });
+//            };
+//
+//            unless(10 > 5, puts(""not greater""), puts(""greater""));
+//        ", @"if (!(10 > 5)) { puts(""not greater"") } else { puts(""greater"") }")>]
+    let testExpandMacros input expected =
+        let programResult = generateProgram input
+        match programResult with
+        | Program p -> 
+            let p', env = p |> defineMacros
+            let expanded, _ = expandMacros p' env
+
+            Assert.AreEqual(expected, expanded.ToString())
+        | _ ->
+            Assert.Fail("Not a program!")

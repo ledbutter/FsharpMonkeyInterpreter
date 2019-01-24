@@ -163,7 +163,7 @@ module Ast =
                 this.Token.Literal
         member this.TokenLiteral() = (this :> Expression).TokenLiteral()
         override x.ToString() =
-            sprintf "if %s %s else %s" (x.Condition.ToString()) (x.Consequence.ToString()) (x.Alternative.ToString())
+            sprintf "if %s { %s } else { %s }" (x.Condition.ToString()) (x.Consequence.ToString()) (x.Alternative.ToString())
 
     type FunctionLiteral =
         {

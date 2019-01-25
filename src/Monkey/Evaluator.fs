@@ -15,7 +15,7 @@ module Evaluator =
         | Error of Object
         | BombOut of Object
 
-    let eval (startingEnv : Environment option) node : Object =
+    let eval (startingEnv : Environment option) node : Object*Environment =
 
         let newError errorMessage =
             {Error.Message = errorMessage} :> Object
@@ -388,7 +388,7 @@ module Evaluator =
                             | HasError e ->
                                 e, env
                             | _ ->
-                                let funcEnvironment = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = Some(currentEnv)}
+                                let funcEnvironment = newEnv (Some(currentEnv))
                                 for i in 0..fn.Parameters.Length-1 do
                                     let argValue = args.[i]
                                     let param = fn.Parameters.[i]
@@ -488,11 +488,10 @@ module Evaluator =
             | Some env ->
                 env
             | None ->
-                {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
-        let res, _ = evalRec node env'
-        res
+                newEmptyEnv()
+        evalRec node env'
 
-    let defineMacros (program : Program) =
+    let defineMacros (program : Program) (env : Environment option) =
 
         let findMacro (node : Statement) =
             match node with
@@ -525,8 +524,14 @@ module Evaluator =
                         currentEnv, x::newStatements
                 evalProgramStatements xs updatedNewStatements newEnv
 
-        let env = {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = None}
-        let newProgramStatements, finalEnv = evalProgramStatements program.Statements [] env
+        let env' =
+            match env with
+            | Some e ->
+                e
+            | None ->
+                newEmptyEnv()
+
+        let newProgramStatements, finalEnv = evalProgramStatements program.Statements [] env'
 
         {Program.Statements = newProgramStatements}, finalEnv
 
@@ -562,7 +567,7 @@ module Evaluator =
                 quoteArgs' callExp.Arguments []
 
             let extendMacroEnv macro (args : Quote list) =
-                let extended = {Environment.Outer = Some(macro.Env); Store = new System.Collections.Generic.Dictionary<string, Object>()}
+                let extended = newEnv (Some(macro.Env))
 
                 macro.Parameters |> List.iteri (fun i x -> extended.Set x.Value (args.[i]) |> ignore )
 
@@ -574,10 +579,10 @@ module Evaluator =
                 | Some macro ->
                     let args = quoteArgs ce
                     let evalEnv = extendMacroEnv macro args
-                    let evaluated = eval (Some(evalEnv)) macro.Body 
+                    let evaluated, env' = eval (Some(evalEnv)) macro.Body 
                     match evaluated with
                     | :? Quote as q ->
-                        q.Node, evalEnv
+                        q.Node, env'
                     | _ ->
                         failwith("bad news bears")
                 | None ->

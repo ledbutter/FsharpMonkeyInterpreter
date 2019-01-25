@@ -31,7 +31,8 @@ module Evaluator_Tests =
             Assert.Fail("Wrong object type")
 
     let evaluateProgram p =
-        eval None p
+        let o, _ = eval None p
+        o
 
     [<TestCase("5", 5)>]
     [<TestCase("10", 10)>]
@@ -479,7 +480,7 @@ module Evaluator_Tests =
         let programResult = generateProgram input
         match programResult with
         | Program p -> 
-            let p', env = p |> defineMacros
+            let p', env = p |> defineMacros <| None
             Assert.AreEqual(2, p'.Statements.Length)
             match env.Get("mymacro") with
             | Some obj ->
@@ -520,7 +521,7 @@ module Evaluator_Tests =
 
         match programResult with
         | Program p -> 
-            let p', env = p |> defineMacros
+            let p', env = p |> defineMacros <| None
             let expanded, _ = expandMacros p' env
 
             Assert.AreEqual(expectedString, expanded.ToString())

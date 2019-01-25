@@ -10,7 +10,7 @@ module Ast_Tests =
     
     let dummyToken = {Token.Literal = "foo"; Type = INT}
 
-    let dummyEnvironment = {Environment.Outer = None; Store = new System.Collections.Generic.Dictionary<string, Object>()}
+    let dummyEnvironment = newEmptyEnv()
 
     [<Test>]
     let testString() =

@@ -218,3 +218,9 @@ module Object =
 
             member __.Type() =
                 ObjectTypes.MACRO_OBJ
+
+    let newEnv outer =
+        {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = outer}
+
+    let newEmptyEnv() =
+        newEnv None

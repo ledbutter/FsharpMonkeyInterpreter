@@ -88,7 +88,7 @@ module Object =
     type Null =
         interface Object with
             member __.Inspect() =
-                sprintf "null"
+                sprintf ""
             member __.Type() =
                 ObjectTypes.NULL_OBJ
         new() = {}
@@ -218,3 +218,9 @@ module Object =
 
             member __.Type() =
                 ObjectTypes.MACRO_OBJ
+
+    let newEnv outer =
+        {Environment.Store = new System.Collections.Generic.Dictionary<string, Object>(); Outer = outer}
+
+    let newEmptyEnv() =
+        newEnv None

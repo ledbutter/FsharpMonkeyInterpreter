@@ -88,7 +88,7 @@ module Object =
     type Null =
         interface Object with
             member __.Inspect() =
-                sprintf "null"
+                sprintf ""
             member __.Type() =
                 ObjectTypes.NULL_OBJ
         new() = {}

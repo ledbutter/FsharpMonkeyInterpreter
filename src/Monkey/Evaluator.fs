@@ -169,7 +169,12 @@ module Evaluator =
             let rec evalProgram (unevaluatedStatements : Statement List) (results : Object List) programEnv =
                 match unevaluatedStatements with
                 | [] -> 
-                    ((List.head results), programEnv)
+                    match results with
+                    | [] ->
+                        NULL, programEnv
+                    | x::xs ->
+                        x, programEnv  
+                    //((List.head results), programEnv)
                 | x::xs ->
                     let result, env = evalRec x programEnv
                     match result with
@@ -489,6 +494,7 @@ module Evaluator =
                 env
             | None ->
                 newEmptyEnv()
+
         evalRec node env'
 
     let defineMacros (program : Program) (env : Environment option) =

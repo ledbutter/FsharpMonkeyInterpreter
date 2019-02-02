@@ -44,7 +44,6 @@ module Ast_Tests =
     [<Test>]
     let testModifySimple() =
         let result = runModify (one())
-        //let result, _ = modify (one()) dummyEnvironment turnOneIntoTwo
         match result with
         | :? IntegerLiteral as il ->
             Assert.AreEqual(2, il.Value)
@@ -54,10 +53,8 @@ module Ast_Tests =
     [<Test>]
     let testModifyComplex() =
         let input = {Program.Statements = [{ExpressionStatement.Expression = one(); Token = dummyToken}]}
-        let expected = {Program.Statements = [{ExpressionStatement.Expression = two(); Token = dummyToken}]}
 
         let result = runModify input
-        //let result, _ = modify input dummyEnvironment turnOneIntoTwo
 
         match result with
         | :? Program as p ->
@@ -72,7 +69,7 @@ module Ast_Tests =
         let input = {InfixExpression.Left = one(); Token = dummyToken; Operator= "+"; Right= two()}
         let expected = {InfixExpression.Left = two(); Token = dummyToken; Operator= "+"; Right= one()}
 
-        let result = runModify input//modify input dummyEnvironment turnOneIntoTwo
+        let result = runModify input
 
         match result with
         | :? InfixExpression as actualInfix ->
@@ -86,7 +83,6 @@ module Ast_Tests =
         let expected = {PrefixExpression.Operator = "-"; Right = two(); Token = dummyToken}
 
         let result = runModify input
-        //let result, _ = modify input dummyEnvironment turnOneIntoTwo
 
         match result with
         | :? PrefixExpression as actualPrefix ->
@@ -100,7 +96,6 @@ module Ast_Tests =
         let expected = {IndexExpression.Left = two(); Index = two(); Token = dummyToken}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? IndexExpression as actualIndex ->
@@ -117,7 +112,6 @@ module Ast_Tests =
         let expected = {IfExpression.Condition = two(); Consequence = expectedStatements; Alternative = expectedStatements; Token = dummyToken}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? IfExpression as ifExp ->
@@ -133,7 +127,6 @@ module Ast_Tests =
         let expected = {ReturnStatement.ReturnValue = two(); Token = dummyToken}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? ReturnStatement as ret ->
@@ -147,7 +140,6 @@ module Ast_Tests =
         let expected = {LetStatement.Value = two(); Token = dummyToken; Name = {Identifier.Token = dummyToken; Value = "Expected"}}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? LetStatement as ls ->
@@ -160,10 +152,8 @@ module Ast_Tests =
         let inputStatements = {BlockStatement.Statements = [{ExpressionStatement.Expression = one(); Token = dummyToken}]; Token = dummyToken}
         let expectedStatements = {BlockStatement.Statements = [{ExpressionStatement.Expression = two(); Token = dummyToken}]; Token = dummyToken}
         let input = {FunctionLiteral.Parameters = []; Body = inputStatements; Token = dummyToken}
-        let expected = {FunctionLiteral.Parameters = []; Body = expectedStatements; Token = dummyToken}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? FunctionLiteral as fl ->
@@ -176,7 +166,6 @@ module Ast_Tests =
         let input = {ArrayLiteral.Elements = [one(); two()]; Token = dummyToken}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? ArrayLiteral as al ->
@@ -193,7 +182,6 @@ module Ast_Tests =
         let input = {HashLiteral.Pairs = pairs; Token = dummyToken}
 
         let result = runModify input
-        //let result = modify input turnOneIntoTwo
 
         match result with
         | :? HashLiteral as hl ->
